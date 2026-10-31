@@ -7,7 +7,16 @@ RUN apt-get update \
  && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip xz-utils libatomic1 \
  && rm -rf /var/lib/apt/lists/*
 COPY versions.table /versions.table
-RUN mkdir /fetch \
+RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
+ && mkdir /fetch /vendor-apt /vendor-apt/keys /vendor-apt/sources /vendor-apt/preferences \
+ && repository() { \
+      install --mode 0644 "$2" "/vendor-apt/keys/$1.$3" \
+      && printf 'Types: deb\nURIs: %s\nSuites: %s\nComponents: main\nSigned-By: /vendor-apt/keys/%s.%s\n' "$4" "$5" "$1" "$3" >"/vendor-apt/sources/$1.sources" \
+      && echo "$6" >>/vendor-apt/packages; \
+    } \
+ && redis_pin() { \
+      printf 'Package: redis-server redis-tools\nPin: version 6:%s.*\nPin-Priority: 1001\n' "$1" >/vendor-apt/preferences/redis; \
+    } \
  && while read -r name version sha256 address; do \
       file="/fetch/${address##*/}"; \
       curl --fail --silent --show-error --location --retry 5 --retry-all-errors --output "$file" "$address"; \
@@ -22,6 +31,15 @@ RUN mkdir /fetch \
         promtool) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner "prometheus-${version}.linux-amd64/promtool" ;; \
         gitleaks) tar -xzf "$file" -C /usr/local/bin --no-same-owner gitleaks ;; \
         powershell) mkdir -p /opt/microsoft/powershell/7 && tar -xzf "$file" -C /opt/microsoft/powershell/7 --no-same-owner && chmod 0755 /opt/microsoft/powershell/7/pwsh && ln -s /opt/microsoft/powershell/7/pwsh /usr/local/bin/pwsh ;; \
+        kubectl) install --mode 0755 "$file" /usr/local/bin/kubectl ;; \
+        kubeconform) tar -xzf "$file" -C /usr/local/bin --no-same-owner kubeconform ;; \
+        rclone) unzip -q -j "$file" "rclone-${version}-linux-amd64/rclone" -d /usr/local/bin && chmod 0755 /usr/local/bin/rclone ;; \
+        mongodump) series=${address##*/server-}; repository mongodb "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${series%.asc}" "mongodb-database-tools=${version}" ;; \
+        mongosh) series=${address##*/server-}; repository mongodb "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${series%.asc}" "mongodb-mongosh=${version}" ;; \
+        pg_dumpall) repository postgresql "$file" asc https://apt.postgresql.org/pub/repos/apt "${codename}-pgdg" "postgresql-client-${version}" ;; \
+        redis-cli) repository redis "$file" asc https://packages.redis.io/deb "$codename" redis-tools && redis_pin "$version" ;; \
+        redis-server) repository redis "$file" asc https://packages.redis.io/deb "$codename" redis-server && redis_pin "$version" ;; \
+        mariadb) repository mariadb "$file" gpg "https://dlm.mariadb.com/repo/mariadb-server/${version}/repo/debian" "$codename" mariadb-client ;; \
         *) echo "versions.table: no install step for $name" >&2; exit 1 ;; \
       esac; \
       rm -f "$file"; \
@@ -29,10 +47,17 @@ RUN mkdir /fetch \
 
 FROM ${BASE}
 ARG DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends \
       git ca-certificates curl jq openssl procps coreutils python3 openssh-client patch unzip xz-utils tar gzip libatomic1 libicu76 \
  && rm -rf /var/lib/apt/lists/*
+COPY --from=install /vendor-apt /vendor-apt
+RUN cp /etc/apt/sources.list.d/debian.sources /vendor-apt/sources/ \
+ && vendor_apt=(-o Dir::Etc::sourceparts=/vendor-apt/sources -o Dir::Etc::preferencesparts=/vendor-apt/preferences) \
+ && apt-get "${vendor_apt[@]}" update \
+ && apt-get "${vendor_apt[@]}" install --yes --no-install-recommends $(cat /vendor-apt/packages) \
+ && rm -rf /var/lib/apt/lists/* /vendor-apt
 COPY --from=install /usr/local /usr/local
 COPY --from=install /opt/microsoft /opt/microsoft
 RUN groupadd --gid 1000 toolbox \

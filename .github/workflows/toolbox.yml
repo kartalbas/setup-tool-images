@@ -50,25 +50,28 @@ jobs:
 
       - name: Test that a wrong row is refused
         run: |
-          planted="${RUNNER_TEMP}/planted.table"
           innocent="${RUNNER_TEMP}/innocent.table"
-          awk '$1 == "yq" { $2 = "v0.0.0" } { print }' toolbox/versions.table >"${planted}"
           cp toolbox/versions.table "${innocent}"
-          if cmp -s toolbox/versions.table "${planted}"; then
-            echo "the planted table equals the table" >&2
-            exit 1
-          fi
-          status=0
-          bash toolbox/test.sh toolbox:test "${planted}" >"${RUNNER_TEMP}/planted.log" 2>&1 || status=$?
-          cat "${RUNNER_TEMP}/planted.log"
-          if [ "${status}" -ne 1 ]; then
-            echo "the planted row ended with ${status}, not 1" >&2
-            exit 1
-          fi
-          if ! grep -q "row 'yq v0.0.0'" "${RUNNER_TEMP}/planted.log"; then
-            echo "the refusal does not name the planted row" >&2
-            exit 1
-          fi
+          for planted_row in "yq v0.0.0" "pg_dumpall 0.0"; do
+            name="${planted_row% *}"
+            planted="${RUNNER_TEMP}/planted-${name}.table"
+            awk -v name="${name}" -v version="${planted_row#* }" '$1 == name { $2 = version } { print }' toolbox/versions.table >"${planted}"
+            if cmp -s toolbox/versions.table "${planted}"; then
+              echo "the planted table equals the table" >&2
+              exit 1
+            fi
+            status=0
+            bash toolbox/test.sh toolbox:test "${planted}" >"${RUNNER_TEMP}/planted.log" 2>&1 || status=$?
+            cat "${RUNNER_TEMP}/planted.log"
+            if [ "${status}" -ne 1 ]; then
+              echo "the planted row ended with ${status}, not 1" >&2
+              exit 1
+            fi
+            if ! grep -q "row '${planted_row}': the image prints" "${RUNNER_TEMP}/planted.log"; then
+              echo "the refusal does not name the planted row" >&2
+              exit 1
+            fi
+          done
           bash toolbox/test.sh toolbox:test "${innocent}"
 
       - name: Log in to ghcr.io

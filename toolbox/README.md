@@ -9,9 +9,30 @@ The tools fetched from their upstream are the rows of [`versions.table`](version
 version, sha256 and address. Every tool is held to its row: the build checks the sha256 of each file
 before it unpacks it, and `test.sh` runs every tool and holds the printed version to the row.
 
-The packages it adds from its Debian base are the `apt-get install` line of the last stage of the
+The packages it adds from its Debian base are the first `apt-get install` line of the last stage of the
 [`Containerfile`](Containerfile), at the base's versions. The base is the `BASE` argument at the top of the
 `Containerfile`, held by the digest of its `linux/amd64` manifest.
+
+The clients of the databases that jobs dump and restore are rows too, but their version is the series of the
+database server they serve, not a release. Debian's archive carries one frozen series of each, so the build
+installs them with apt from the vendor's own repository, which it configures in a directory of its own. The file
+of such a row is the vendor's signing key: the build checks its sha256 like any other file, and apt then holds
+every package to the signature of the repository. `test.sh` runs the client and holds the printed version to the
+series.
+
+| Row | Package | Serves | The row holds |
+| :--- | :--- | :--- | :--- |
+| `mongodump` | `mongodb-database-tools` | MongoDB 8.0 | the exact version |
+| `mongosh` | `mongodb-mongosh` | MongoDB 8.0 | the exact version |
+| `pg_dumpall` | `postgresql-client-18` | PostgreSQL 18 | the major, `18` |
+| `redis-cli` | `redis-tools` | Redis 8.8 | the series, `8.8` |
+| `redis-server` | `redis-server` | Redis 8.8 | the series, `8.8` |
+| `mariadb` | `mariadb-client` | MariaDB 12.3 | the series, `12.3` |
+
+MongoDB's database tools and mongosh are numbered apart from the server, and the repositories of the
+series 7.0 and 8.0 carry the same builds. Their rows are therefore the exact versions, and the series is the
+repository that the address of the signing key names. A database server that leaves its series needs a toolbox
+cut: edit the row, and for MongoDB its key address too, then cut the tag.
 
 It runs as uid 1000 and starts in `/work`, which that user owns. `test.sh` holds both. It sets no
 entrypoint: the job that runs it sets the command.
@@ -29,7 +50,8 @@ Two rows are not installed the way their package's name suggests:
 docker run --rm ghcr.io/kartalbas/toolbox:<tag> <tool> --version
 ```
 
-helm takes `helm version` instead of `--version`.
+A few tools take another command: `helm version`, `kubectl version --client`, `kubeconform -v`, `rclone version`
+and `gitleaks version`. `test.sh` names the command of every row.
 
 Verify it before you use it. The digest of each tag stands in the job summary of its workflow run:
 
@@ -59,3 +81,12 @@ Test it on your machine before the push:
 docker build --file toolbox/Containerfile --tag toolbox:local toolbox/
 bash toolbox/test.sh toolbox:local
 ```
+
+The build prints messages that are no failure and that it cannot clear:
+
+- `update-alternatives: warning: skip creation of /usr/share/man/man1/lzma.1.gz ...`, ten lines for each of the two
+  stages. The base installs no man pages, and the `xz-utils` package links man pages that are therefore missing.
+- `update-alternatives: error: no alternatives for my.cnf`, once. The postinst script of `mariadb-common` queries
+  that alternative before any package has registered it, then installs it and goes on.
+
+Clearing either would take a change to the base's dpkg configuration or to a vendor's package script.

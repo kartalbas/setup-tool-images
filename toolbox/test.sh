@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Usage: bash toolbox/test.sh <image> [versions-table]
 # Runs every tool of the table in the image as the image's own user and holds the printed version to
-# its row, then holds the user, the work folder and the tools of the test pod. Exit 1 on the first difference.
+# its row, then holds the user, the work folder and the tools of the test pod. A row of three numbers is held
+# to that exact version; a row of one or two numbers is a series, and the printed version must start with it.
+# Exit 1 on the first difference.
 set -u
 
 image=${1:?usage: test.sh <image> [versions-table]}
@@ -25,7 +27,24 @@ version_output() { # <row name> -> what the tool prints for its version
     promtool) run promtool --version ;;
     gitleaks) run gitleaks version ;;
     powershell) run pwsh -v ;;
+    kubectl) run kubectl version --client ;;
+    kubeconform) run kubeconform -v ;;
+    rclone) run rclone version ;;
+    mongodump) run mongodump --version ;;
+    mongosh) run mongosh --version ;;
+    pg_dumpall) run pg_dumpall --version ;;
+    redis-cli) run redis-cli --version ;;
+    redis-server) run redis-server --version ;;
+    mariadb) run mariadb --version ;;
     *) echo "this test has no version command for the row"; return 127 ;;
+  esac
+}
+
+holds() { # <printed version> <version of the row>
+  local wanted=${2#v}
+  case "$wanted" in
+    *.*.*) [ "$1" = "$wanted" ] ;;
+    *) [[ "$1" == "$wanted".* ]] ;;
   esac
 }
 
@@ -34,8 +53,8 @@ while read -r name version _ _; do
   case "$name" in '' | '#'*) continue ;; esac
   rows=$((rows + 1))
   output=$(version_output "$name") || fail "row '$name $version': $output"
-  printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
-  [ "$printed" = "${version#v}" ] || fail "row '$name $version': the image prints '$printed': $output"
+  printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+)+' | head -n 1)
+  holds "$printed" "$version" || fail "row '$name $version': the image prints '$printed': $output"
   printf 'ok %s %s (printed %s)\n' "$name" "$version" "$printed"
 done <"$table"
 [ "$rows" -gt 0 ] || fail "no row in $table"
