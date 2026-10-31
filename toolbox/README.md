@@ -29,6 +29,8 @@ Two rows are not installed the way their package's name suggests:
 docker run --rm ghcr.io/kartalbas/toolbox:<tag> <tool> --version
 ```
 
+helm takes `helm version` instead of `--version`.
+
 Verify it before you use it. The digest of each tag stands in the job summary of its workflow run:
 
 ```
