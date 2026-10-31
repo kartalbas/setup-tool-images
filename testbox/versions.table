@@ -1,0 +1,19 @@
+# The Debian packages of the testbox image, one row per package the Containerfile installs, in install order.
+# Fields, separated by one space: <name> <version>
+# The name is the Debian package name. The version is the exact one apt installs, which verifies the archive signatures.
+# A line starting with # and an empty line are not rows.
+# Every value was read at its source on 2026-10-31.
+#
+# chromium: the newest version of the base's own suite, trixie with its security updates. Read at https://packages.debian.org/trixie/chromium
+# and in the Packages index https://deb.debian.org/debian-security/dists/trixie-security/main/binary-amd64/Packages.xz. The trixie index itself
+# still holds 150.0.7871.181-1~deb13u1. A security update replaces its predecessor in the archive, so the build stops at this row until it is bumped.
+chromium 156.0.8078.73-1~deb13u1
+# fonts-dejavu-core: the font fontconfig prefers for the families sans-serif, serif and monospace, and the first of the font alternatives that
+# fontconfig-config, which chromium needs, names. Without it, a page that asks for system-ui got the letter widths of a monospace font. Read at
+# https://packages.debian.org/trixie/fonts-dejavu-core and in the trixie Packages index
+# https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.xz
+fonts-dejavu-core 2.37-8
+# fonts-liberation: the stand-in the fontconfig aliases pick for Arial, Helvetica, Times New Roman and Courier New, with the same letter widths,
+# so a page that names those fonts breaks its lines where it does on a machine that has them. Read at
+# https://packages.debian.org/trixie/fonts-liberation and in the same trixie Packages index
+fonts-liberation 1:2.1.5-3
