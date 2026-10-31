@@ -1,9 +1,10 @@
-# The tools of the toolbox image, one row per fetched tool, in install order.
+# The tools of the toolbox image, one row per tool, in install order.
 # Fields, separated by one space: <name> <version> <sha256> <address>
 # The sha256 is the one the upstream release publishes for the file at the address. The rows of the database clients are the exception:
 # their file is the signing key of the vendor's apt repository, for which no upstream checksum exists, so the sha256 is that of the key file
-# as read at the address on the date below, and apt then holds every package to the signature of the repository. The skopeo row is the other
-# exception: its file is Debian's package, and its sha256 is the one Debian's archive states for it.
+# as read at the address on the date below, and apt then holds every package to the signature of the repository. A row with no sha256 and no
+# address is a package of the base's Debian archive: the name is the package's, the version is the exact one apt installs, and apt holds the
+# package to the signature of the archive.
 # A line starting with # and an empty line are not rows.
 # Every value was read at its source on 2026-10-31.
 #
@@ -37,10 +38,10 @@ kubeconform v0.8.0 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287
 # release key (https://rclone.org/KEYS, fingerprint FBF737ECE9F8AB18604BD2AC93935E02FF3B54FA) was checked
 rclone v1.75.2 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702 https://github.com/rclone/rclone/releases/download/v1.75.2/rclone-v1.75.2-linux-amd64.zip
 # skopeo: NOT THE NEWEST RELEASE ON PURPOSE (v1.24.1 of 2026-09-16 is out). Upstream containers/skopeo publishes no release file, its newest release
-# carries no asset, and trixie-backports carries no skopeo, so Debian's package is the one signed build: the trixie package 1.18.0+ds1-1+b5. The build
-# checks this file and names it in the last stage's apt call, which installs the package. Its sha256 is the one
-# packages.debian.org/trixie/amd64/skopeo/download prints
-skopeo 1.18.0 7ca44a3f31f3cddca9d9dc858029dd08c30faf6e93456753825509e6a59192e2 https://deb.debian.org/debian/pool/main/s/skopeo/skopeo_1.18.0+ds1-1+b5_amd64.deb
+# carries no asset, and trixie-backports carries no skopeo, so Debian's package is the one signed build. Read at https://packages.debian.org/trixie/skopeo
+# and in the trixie Packages index https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.xz. A newer build of the package replaces this
+# one in the archive, so the build stops at this row until it is bumped
+skopeo 1.18.0+ds1-1+b5
 # The database clients come from the vendors' apt repositories on the base's Debian suite, because Debian's own archive carries one frozen
 # series of each. The version of a row is the series of the database server the client dumps and restores, and the build installs the newest
 # package of that series; test.sh holds the printed version to the series. Where the series says nothing about the client's own number, the row is

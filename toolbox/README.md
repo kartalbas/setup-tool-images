@@ -43,11 +43,11 @@ Three rows are not installed the way their package's name suggests:
   the file with the checked sha256 goes in.
 - `pnpm` is the standalone release file, not the npm tarball: that tarball fetches its native binary
   from the registry when it first runs, and a job without registry access would fail at that moment.
-- `skopeo` is a Debian package. The build checks the sha256 of its file and names the file in the last stage's apt
-  call, which installs the package with its dependencies from the base's archive. Where the archive carries the same
-  version, apt takes the archive's copy, held to the archive's signature. The trust policy, `/etc/containers/policy.json`,
-  comes with the dependency `golang-github-containers-common`, and `test.sh` holds that file: skopeo refuses every
-  copy without a policy, and its version print does not show it.
+- `skopeo` is Debian's package from the base's archive, because upstream publishes no release file. Its row names the
+  exact version of the package and no file: the last stage's apt call installs that version with its dependencies,
+  apt holds it to the signature of the archive, and `test.sh` holds the installed package to the row. The trust policy,
+  `/etc/containers/policy.json`, comes with the dependency `golang-github-containers-common`, and `test.sh` holds that
+  file: skopeo refuses every copy without a policy, and its version print does not show it.
 
 ## Use it
 

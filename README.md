@@ -43,7 +43,8 @@ says how it is bumped.
    sha256 that the upstream's own checksum file states for the file, and the address of the upstream
    release file. A row never points at a mirror. The rows of the database clients are the exception:
    their file is the vendor's signing key and their version is mostly a series, as the
-   [`toolbox/README.md`](toolbox/README.md) explains.
+   [`toolbox/README.md`](toolbox/README.md) explains. The skopeo row is a package of the base's Debian
+   archive: its exact version, with no sha256 and no address.
 2. Commit to `master`. The workflow builds and tests the image and pushes nothing.
 3. Cut the tag `<image>/v<major>.<minor>.<patch>` on that commit and push it. The workflow builds,
    tests, pushes, signs and verifies.

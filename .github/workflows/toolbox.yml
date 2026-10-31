@@ -52,7 +52,7 @@ jobs:
         run: |
           innocent="${RUNNER_TEMP}/innocent.table"
           cp toolbox/versions.table "${innocent}"
-          for planted_row in "yq v0.0.0" "pg_dumpall 0.0"; do
+          for planted_row in "yq v0.0.0" "pg_dumpall 0.0" "skopeo 0.0.0-1"; do
             name="${planted_row% *}"
             planted="${RUNNER_TEMP}/planted-${name}.table"
             awk -v name="${name}" -v version="${planted_row#* }" '$1 == name { $2 = version } { print }' toolbox/versions.table >"${planted}"
@@ -67,7 +67,7 @@ jobs:
               echo "the planted row ended with ${status}, not 1" >&2
               exit 1
             fi
-            if ! grep -q "row '${planted_row}': the image prints" "${RUNNER_TEMP}/planted.log"; then
+            if ! grep -q -F -e "row '${planted_row}': the image prints" -e "row '${planted_row}': the image holds" "${RUNNER_TEMP}/planted.log"; then
               echo "the refusal does not name the planted row" >&2
               exit 1
             fi

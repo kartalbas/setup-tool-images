@@ -3,6 +3,7 @@
 # Runs every tool of the table in the image as the image's own user and holds the printed version to
 # its row, then holds the user, the work folder and the tools of the test pod. A row of three numbers is held
 # to that exact version; a row of one or two numbers is a series, and the printed version must start with it.
+# A row with no sha256 is a package of the base's archive, held to its exact version as dpkg records it.
 # Exit 1 on the first difference.
 set -u
 
@@ -50,12 +51,17 @@ holds() { # <printed version> <version of the row>
 }
 
 rows=0
-while read -r name version _ _; do
+while read -r name version sha256 _; do
   case "$name" in '' | '#'*) continue ;; esac
   rows=$((rows + 1))
   output=$(version_output "$name") || fail "row '$name $version': $output"
   printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+)+' | head -n 1)
-  holds "$printed" "$version" || fail "row '$name $version': the image prints '$printed': $output"
+  if [ -z "$sha256" ]; then
+    held=$(run dpkg-query --show "--showformat=\${db:Status-Status} \${Version}" "$name") || fail "row '$name $version': $held"
+    [ "$held" = "installed $version" ] || fail "row '$name $version': the image holds '$held'"
+  else
+    holds "$printed" "$version" || fail "row '$name $version': the image prints '$printed': $output"
+  fi
   printf 'ok %s %s (printed %s)\n' "$name" "$version" "$printed"
 done <"$table"
 [ "$rows" -gt 0 ] || fail "no row in $table"
