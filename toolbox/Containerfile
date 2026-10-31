@@ -1,6 +1,7 @@
 ARG BASE=debian:trixie-20261027-slim@sha256:1e1a22175fbf1b32157ddaf0219e1db4e5401fab2b94ed285add64d18587cd2d
 
 FROM ${BASE} AS install
+ARG DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip xz-utils libatomic1 \
@@ -27,6 +28,7 @@ RUN mkdir /fetch \
     done < <(grep -v -E '^(#|$)' /versions.table)
 
 FROM ${BASE}
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends \
       git ca-certificates curl jq openssl procps coreutils python3 openssh-client patch unzip xz-utils tar gzip libatomic1 libicu76 \
