@@ -4,7 +4,7 @@ FROM ${BASE} AS install
 ARG DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN apt-get update \
- && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip xz-utils libatomic1 \
+ && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip libatomic1 \
  && rm -rf /var/lib/apt/lists/*
 COPY versions.table /versions.table
 RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \

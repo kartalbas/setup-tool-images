@@ -89,8 +89,8 @@ bash toolbox/test.sh toolbox:local
 
 The build prints messages that are no failure and that it cannot clear:
 
-- `update-alternatives: warning: skip creation of /usr/share/man/man1/lzma.1.gz ...`, ten lines for each of the two
-  stages. The base installs no man pages, and the `xz-utils` package links man pages that are therefore missing.
+- `update-alternatives: warning: skip creation of /usr/share/man/man1/lzma.1.gz ...`, ten lines from the last stage.
+  The base installs no man pages, and the `xz-utils` package links man pages that are therefore missing.
 - `update-alternatives: error: no alternatives for my.cnf`, once. The postinst script of `mariadb-common` queries
   that alternative before any package has registered it, then installs it and goes on.
 
