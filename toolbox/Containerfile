@@ -9,6 +9,7 @@ RUN apt-get update \
 COPY versions.table /versions.table
 RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
  && mkdir /fetch /vendor-apt /vendor-apt/keys /vendor-apt/sources /vendor-apt/preferences \
+ && printf 'Dir::Etc::sourceparts "/vendor-apt/sources";\nDir::Etc::preferencesparts "/vendor-apt/preferences";\n' >/vendor-apt/apt.conf \
  && repository() { \
       install --mode 0644 "$2" "/vendor-apt/keys/$1.$3" \
       && printf 'Types: deb\nURIs: %s\nSuites: %s\nComponents: main\nSigned-By: /vendor-apt/keys/%s.%s\n' "$4" "$5" "$1" "$3" >"/vendor-apt/sources/$1.sources" \
@@ -48,16 +49,14 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
 
 FROM ${BASE}
 ARG DEBIAN_FRONTEND=noninteractive
-SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends \
       git ca-certificates curl jq openssl procps coreutils python3 openssh-client patch unzip xz-utils tar gzip libatomic1 libicu76 \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=install /vendor-apt /vendor-apt
 RUN cp /etc/apt/sources.list.d/debian.sources /vendor-apt/sources/ \
- && vendor_apt=(-o Dir::Etc::sourceparts=/vendor-apt/sources -o Dir::Etc::preferencesparts=/vendor-apt/preferences) \
- && apt-get "${vendor_apt[@]}" update \
- && apt-get "${vendor_apt[@]}" install --yes --no-install-recommends $(cat /vendor-apt/packages) \
+ && apt-get --config-file /vendor-apt/apt.conf update \
+ && apt-get --config-file /vendor-apt/apt.conf install --yes --no-install-recommends $(cat /vendor-apt/packages) \
  && rm -rf /var/lib/apt/lists/* /vendor-apt
 COPY --from=install /usr/local /usr/local
 COPY --from=install /opt/microsoft /opt/microsoft
