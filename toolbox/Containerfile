@@ -25,7 +25,7 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
       echo "$sha256  $file" | sha256sum --check -; \
       case "$name" in \
         node) tar -xzf "$file" -C /usr/local --strip-components=1 --no-same-owner --exclude='*/CHANGELOG.md' --exclude='*/LICENSE' --exclude='*/README.md' ;; \
-        npm) npm install --global --ignore-scripts --offline "$file" ;; \
+        npm) npm install --global --ignore-scripts --offline --no-update-notifier "$file" ;; \
         pnpm) mkdir /usr/local/pnpm && tar -xzf "$file" -C /usr/local/pnpm --no-same-owner && ln -s /usr/local/pnpm/pnpm /usr/local/bin/pnpm ;; \
         dart) unzip -q "$file" -d /fetch/dart && mv /fetch/dart/dart-sdk /usr/local/dart && ln -s /usr/local/dart/bin/dart /usr/local/bin/dart ;; \
         helm) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner linux-amd64/helm ;; \
