@@ -1,0 +1,128 @@
+name: toolbox
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - toolbox/**
+      - .github/workflows/toolbox.yml
+    tags:
+      - toolbox/v*
+  pull_request:
+    paths:
+      - toolbox/**
+      - .github/workflows/toolbox.yml
+
+jobs:
+  toolbox:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/kartalbas/toolbox
+          tags: type=match,pattern=toolbox/v(.*),group=1
+          flavor: latest=true
+
+      - name: Build the image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: toolbox
+          file: toolbox/Containerfile
+          load: true
+          tags: toolbox:test
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test the image
+        run: bash toolbox/test.sh toolbox:test
+
+      - name: Test that a wrong row is refused
+        run: |
+          planted="${RUNNER_TEMP}/planted.table"
+          innocent="${RUNNER_TEMP}/innocent.table"
+          awk '$1 == "yq" { $2 = "v0.0.0" } { print }' toolbox/versions.table >"${planted}"
+          cp toolbox/versions.table "${innocent}"
+          if cmp -s toolbox/versions.table "${planted}"; then
+            echo "the planted table equals the table" >&2
+            exit 1
+          fi
+          status=0
+          bash toolbox/test.sh toolbox:test "${planted}" >"${RUNNER_TEMP}/planted.log" 2>&1 || status=$?
+          cat "${RUNNER_TEMP}/planted.log"
+          if [ "${status}" -ne 1 ]; then
+            echo "the planted row ended with ${status}, not 1" >&2
+            exit 1
+          fi
+          if ! grep -q "row 'yq v0.0.0'" "${RUNNER_TEMP}/planted.log"; then
+            echo "the refusal does not name the planted row" >&2
+            exit 1
+          fi
+          bash toolbox/test.sh toolbox:test "${innocent}"
+
+      - name: Log in to ghcr.io
+        if: startsWith(github.ref, 'refs/tags/toolbox/v')
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image
+        id: push
+        if: startsWith(github.ref, 'refs/tags/toolbox/v')
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: toolbox
+          file: toolbox/Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+
+      - name: Test the pushed image
+        if: startsWith(github.ref, 'refs/tags/toolbox/v')
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: bash toolbox/test.sh "ghcr.io/kartalbas/toolbox@${DIGEST}"
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: startsWith(github.ref, 'refs/tags/toolbox/v')
+        with:
+          cosign-release: v3.1.4
+
+      - name: Sign and verify the pushed image
+        if: startsWith(github.ref, 'refs/tags/toolbox/v')
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          REF: ${{ github.ref }}
+        run: |
+          cosign sign --yes "ghcr.io/kartalbas/toolbox@${DIGEST}"
+          cosign verify \
+            --certificate-identity "https://github.com/kartalbas/setup-tool-images/.github/workflows/toolbox.yml@${REF}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "ghcr.io/kartalbas/toolbox@${DIGEST}"
+
+      - name: Write the digest and the tags
+        if: startsWith(github.ref, 'refs/tags/toolbox/v')
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            echo "digest: ${DIGEST}"
+            echo
+            echo "tags: $(echo "${TAGS}" | paste -s -d ' ' -)"
+          } | tee -a "${GITHUB_STEP_SUMMARY}"

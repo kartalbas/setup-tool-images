@@ -1,0 +1,28 @@
+# The tools of the toolbox image, one row per fetched tool, in install order.
+# Fields, separated by one space: <name> <version> <sha256> <address>
+# The sha256 is the one the upstream release publishes for the file at the address.
+# A line starting with # and an empty line are not rows.
+# Every value was read at its source on 2026-10-31.
+#
+# node: newest LTS line (nodejs.org/dist/index.json); sha256 from https://nodejs.org/dist/v26.13.0/SHASUMS256.txt
+node 26.13.0 5848553868b402d3fabb5b09270649977780a390f832155721025a08b5104455 https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-x64.tar.gz
+# npm: dist-tag latest of the npm registry; sha256 of the registry tarball, which matches the sha512 integrity of https://registry.npmjs.org/npm/12.2.1
+npm 12.2.1 228bd64aaef23270dbdbd2cf3d5ef5c467602ef38c4066246cef1984adab9a67 https://registry.npmjs.org/npm/-/npm-12.2.1.tgz
+# pnpm: dist-tag latest of the npm registry. The standalone release file, not the npm tarball: the tarball fetches its native binary from the
+# registry when it first runs, which a pod cannot do. sha256 is the digest GitHub states for the release asset (gh api repos/pnpm/pnpm/releases/tags/v12.16.1);
+# its pnpm binary is byte-identical to the one in @pnpm/exe.linux-x64 12.16.1, whose sha512 integrity the npm registry states
+pnpm 12.16.1 565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825 https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-linux-x64.tar.gz
+# dart: stable channel (VERSION file of the stable channel); sha256 from the .sha256sum beside the file in the dart-archive
+dart 3.13.7 eb99aed266efbcb615c6ae21c12f52cfe935b9f208bccc5fea7f64c21e867229 https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.7/sdk/dartsdk-linux-x64-release.zip
+# helm: newest release; sha256 from https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz.sha256sum
+helm v4.3.1 0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz
+# yq: newest release; sha256 is the SHA-256 column of the release file "checksums", ordered by its file "checksums_hashes_order"
+yq v4.54.1 8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f https://github.com/mikefarah/yq/releases/download/v4.54.1/yq_linux_amd64
+# promtool: NOT THE NEWEST RELEASE ON PURPOSE (3.15.1 is out). It is the Prometheus that kube-prometheus-stack 92.13.1 runs, and promtool
+# validates rules against the version that runs, so it moves with that chart. sha256 from the release file sha256sums.txt
+promtool 3.15.0 2a542df32eac02ee17b9d844fb2aa1de00dafa5476579ba8a3ba862e9d572ea0 https://github.com/prometheus/prometheus/releases/download/v3.15.0/prometheus-3.15.0.linux-amd64.tar.gz
+# gitleaks: NOT THE NEWEST RELEASE ON PURPOSE (8.30.1 is out). Newer releases report a line in a test that a consumer's release scan passes
+# today, so it moves with that scan. sha256 from the release file gitleaks_8.21.2_checksums.txt
+gitleaks v8.21.2 5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+# powershell: newest release; sha256 from the release file hashes.sha256
+powershell 7.6.9 1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-x64.tar.gz
