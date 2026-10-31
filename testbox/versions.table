@@ -1,4 +1,4 @@
-# The Debian packages of the testbox image, one row per package the Containerfile installs, in install order.
+# The Debian packages of the testbox image, one row per package the Containerfile installs.
 # Fields, separated by one space: <name> <version>
 # The name is the Debian package name. The version is the exact one apt installs, which verifies the archive signatures.
 # A line starting with # and an empty line are not rows.
