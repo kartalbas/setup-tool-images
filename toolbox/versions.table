@@ -23,17 +23,15 @@ yq v4.54.1 8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f http
 # promtool: NOT THE NEWEST RELEASE ON PURPOSE (3.15.1 is out). It is the Prometheus that kube-prometheus-stack 92.13.1 runs, and promtool
 # validates rules against the version that runs, so it moves with that chart. sha256 from the release file sha256sums.txt
 promtool 3.15.0 2a542df32eac02ee17b9d844fb2aa1de00dafa5476579ba8a3ba862e9d572ea0 https://github.com/prometheus/prometheus/releases/download/v3.15.0/prometheus-3.15.0.linux-amd64.tar.gz
-# gitleaks: NOT THE NEWEST RELEASE ON PURPOSE (8.30.1 is out). Newer releases report a line in a test that a consumer's release scan passes
-# today, so it moves with that scan. sha256 from the release file gitleaks_8.21.2_checksums.txt
-gitleaks v8.21.2 5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+# gitleaks: newest release; sha256 from the release file gitleaks_8.30.1_checksums.txt
+gitleaks v8.30.1 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
 # powershell: newest release; sha256 from the release file hashes.sha256
 powershell 7.6.9 1da6d6d6035d651f20e70ddee7c4c15ac6ab8b9fb40ee92240d91263f28a884b https://github.com/PowerShell/PowerShell/releases/download/v7.6.9/powershell-7.6.9-linux-x64.tar.gz
 # kubectl: the newest patch of the 1.35 line (https://dl.k8s.io/release/stable-1.35.txt), the minor of the Kubernetes the jobs' clusters run.
 # kubectl is within one minor of its API server either way, and the row moves with the clusters' minor. sha256 from the .sha256 file beside the binary
 kubectl v1.35.10 c49a28f1f4efc4d475ed05f47f2ce8e563bf7bef69ed77fe1b924ea6d83b6327 https://dl.k8s.io/release/v1.35.10/bin/linux/amd64/kubectl
-# kubeconform: NOT THE NEWEST RELEASE ON PURPOSE (0.8.0 is out). 0.6.7 is the release the manifest checks that move onto this image run today, so
-# each check keeps its version while it moves. sha256 from the release file CHECKSUMS
-kubeconform v0.6.7 95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73 https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+# kubeconform: newest release; sha256 from the release file CHECKSUMS
+kubeconform v0.8.0 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883 https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
 # rclone: newest release (https://downloads.rclone.org/version.txt). sha256 from the release file SHA256SUMS, whose PGP signature by the rclone
 # release key (https://rclone.org/KEYS, fingerprint FBF737ECE9F8AB18604BD2AC93935E02FF3B54FA) was checked
 rclone v1.75.2 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702 https://github.com/rclone/rclone/releases/download/v1.75.2/rclone-v1.75.2-linux-amd64.zip
