@@ -9,6 +9,9 @@ table=${2:-$(dirname "$0")/versions.table}
 
 fail() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
 
+# A first run of an image that is not local prints docker's pull notice into the output it reads.
+docker image inspect "$image" >/dev/null 2>&1 || docker pull --quiet "$image" >/dev/null || fail "cannot pull $image"
+
 run() { docker run --rm "$image" "$@" 2>&1 </dev/null; }
 
 version_output() { # <row name> -> what the tool prints for its version
