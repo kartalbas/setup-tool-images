@@ -30,6 +30,7 @@ version_output() { # <row name> -> what the tool prints for its version
     kubectl) run kubectl version --client ;;
     kubeconform) run kubeconform -v ;;
     rclone) run rclone version ;;
+    skopeo) run skopeo --version ;;
     mongodump) run mongodump --version ;;
     mongosh) run mongosh --version ;;
     pg_dumpall) run pg_dumpall --version ;;
@@ -72,6 +73,9 @@ for tool in git jq curl openssl od tr ps python3 ssh; do
   output=$(run sh -c 'command -v "$1"' sh "$tool") || fail "$tool is not in the image"
   printf 'ok %s at %s\n' "$tool" "$output"
 done
+
+run sh -c 'test -f /etc/containers/policy.json && test -s /etc/containers/policy.json' >/dev/null || fail "/etc/containers/policy.json is not a non-empty file of the image, and skopeo refuses every copy without a trust policy"
+printf 'ok /etc/containers/policy.json is a non-empty file\n'
 
 output=$(run sh -c 'ls /versions.table') && fail "the image carries /versions.table"
 printf 'ok the image carries no version table\n'

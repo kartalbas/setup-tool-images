@@ -37,12 +37,17 @@ cut: edit the row, and for MongoDB its key address too, then cut the tag.
 It runs as uid 1000 and starts in `/work`, which that user owns. `test.sh` holds both. It sets no
 entrypoint: the job that runs it sets the command.
 
-Two rows are not installed the way their package's name suggests:
+Three rows are not installed the way their package's name suggests:
 
 - `npm` is installed from its registry tarball, offline and without install scripts, so nothing but
   the file with the checked sha256 goes in.
 - `pnpm` is the standalone release file, not the npm tarball: that tarball fetches its native binary
   from the registry when it first runs, and a job without registry access would fail at that moment.
+- `skopeo` is a Debian package. The build checks the sha256 of its file and names the file in the last stage's apt
+  call, which installs the package with its dependencies from the base's archive. Where the archive carries the same
+  version, apt takes the archive's copy, held to the archive's signature. The trust policy, `/etc/containers/policy.json`,
+  comes with the dependency `golang-github-containers-common`, and `test.sh` holds that file: skopeo refuses every
+  copy without a policy, and its version print does not show it.
 
 ## Use it
 

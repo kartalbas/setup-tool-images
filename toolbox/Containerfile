@@ -8,7 +8,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY versions.table /versions.table
 RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
- && mkdir /fetch /vendor-apt /vendor-apt/keys /vendor-apt/sources /vendor-apt/preferences \
+ && mkdir /fetch /vendor-apt /vendor-apt/debs /vendor-apt/keys /vendor-apt/sources /vendor-apt/preferences \
  && repository() { \
       install --mode 0644 "$2" "/vendor-apt/keys/$1.$3" \
       && printf 'Types: deb\nURIs: %s\nSuites: %s\nComponents: main\nSigned-By: /vendor-apt/keys/%s.%s\n' "$4" "$5" "$1" "$3" >"/vendor-apt/sources/$1.sources" \
@@ -34,6 +34,7 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
         kubectl) install --mode 0755 "$file" /usr/local/bin/kubectl ;; \
         kubeconform) tar -xzf "$file" -C /usr/local/bin --no-same-owner kubeconform ;; \
         rclone) unzip -q -j "$file" "rclone-${version}-linux-amd64/rclone" -d /usr/local/bin && chmod 0755 /usr/local/bin/rclone ;; \
+        skopeo) install --mode 0644 "$file" "/vendor-apt/debs/${file##*/}" && echo "/vendor-apt/debs/${file##*/}" >>/vendor-apt/packages ;; \
         mongodump) series=${address##*/server-}; repository mongodb "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${series%.asc}" "mongodb-database-tools=${version}" ;; \
         mongosh) series=${address##*/server-}; repository mongodb "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${series%.asc}" "mongodb-mongosh=${version}" ;; \
         pg_dumpall) repository postgresql "$file" asc https://apt.postgresql.org/pub/repos/apt "${codename}-pgdg" "postgresql-client-${version}" ;; \
