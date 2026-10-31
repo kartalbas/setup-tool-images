@@ -10,8 +10,8 @@ version, sha256 and address. Every tool is held to its row: the build checks the
 before it unpacks it, and `test.sh` runs every tool and holds the printed version to the row.
 
 The packages it adds from its Debian base are the first `apt-get install` line of the last stage of the
-[`Containerfile`](Containerfile), at the base's versions. The base is the `BASE` argument at the top of the
-`Containerfile`, held by the digest of its `linux/amd64` manifest.
+[`Containerfile`](Containerfile), at the base's versions, and the `skopeo` row, at the exact version it names.
+The base is the `BASE` argument at the top of the `Containerfile`, held by the digest of its `linux/amd64` manifest.
 
 The clients of the databases that jobs dump and restore are rows too, but their version is the series of the
 database server they serve, not a release. Debian's archive carries one frozen series of each, so the build
