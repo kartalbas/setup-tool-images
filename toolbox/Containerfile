@@ -56,7 +56,7 @@ RUN apt-get update \
 COPY --from=install /vendor-apt /vendor-apt
 RUN cp /etc/apt/sources.list.d/debian.sources /vendor-apt/sources/ \
  && apt-get --config-file /vendor-apt/apt.conf update \
- && apt-get --config-file /vendor-apt/apt.conf install --yes --no-install-recommends $(cat /vendor-apt/packages) \
+ && xargs apt-get --config-file /vendor-apt/apt.conf install --yes --no-install-recommends </vendor-apt/packages \
  && rm -rf /var/lib/apt/lists/* /vendor-apt
 COPY --from=install /usr/local /usr/local
 COPY --from=install /opt/microsoft /opt/microsoft
