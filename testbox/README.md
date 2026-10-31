@@ -81,3 +81,7 @@ Test it on your machine before the push:
 docker build --file testbox/Containerfile --tag testbox:local testbox/
 bash testbox/test.sh testbox:local
 ```
+
+The build prints one warning, from `update-alternatives`: it skips the man page link of `open`,
+because the base installs no man pages. That link comes from `xdg-utils`, which `chromium-common`
+depends on.
