@@ -47,7 +47,7 @@ its `COPY` instruction.
 ## Use it
 
 ```
-docker run --rm ghcr.io/kartalbas/testbox:<tag> chromium --headless --dump-dom 'data:text/html,<p>ok</p>'
+docker run --rm ghcr.io/kartalbas/testbox:<tag> chromium --headless --no-sandbox --disable-dev-shm-usage --dump-dom 'data:text/html,<p>ok</p>'
 ```
 
 Verify it before you use it. The digest of each tag stands in the job summary of its workflow run:
