@@ -1,7 +1,7 @@
 # testbox
 
-The [toolbox](../toolbox/README.md) image plus a headless Chromium, for the test jobs that need a
-browser. It carries no project source and no project script: the job that runs it brings the code.
+The [toolbox](../toolbox/README.md) image plus a headless Chromium and make, for the test jobs that
+need a browser and the build jobs that compile with the toolbox's emcc. It carries no project source and no project script: the job that runs it brings the code.
 
 ## What is in it
 
@@ -20,6 +20,8 @@ every package to its row and holds the version that `chromium --version` prints 
   for `system-ui` gets the letter widths of a monospace font. Liberation draws the pages that name Arial, Helvetica,
   Times New Roman or Courier New with the same letter widths. `test.sh` holds that `fc-match` names
   DejaVu Sans for `sans-serif` and Liberation Sans for `Arial`.
+- `make` is Debian's own package from trixie. A build that compiles C sources with the toolbox's
+  `emcc` runs it.
 
 The image sets two variables for the jobs that start the browser:
 
