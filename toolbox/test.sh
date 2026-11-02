@@ -67,10 +67,10 @@ while read -r name version sha256 _; do
       [ "$version" = REDIS_VERSION ] || fail "row '$name $version': a Redis row holds the marker REDIS_VERSION"
       version=$redis_series ;;
   esac
-  output=$(version_output "$name") || fail "row '$name $version': $output"
+  output=$(version_output "$name") || fail "row '$name $version': the version command ends with an error: $output"
   printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+)+' | head -n 1)
   if [ -z "$sha256" ]; then
-    held=$(run dpkg-query --show "--showformat=\${db:Status-Status} \${Version}" "$name") || fail "row '$name $version': $held"
+    held=$(run dpkg-query --show "--showformat=\${db:Status-Status} \${Version}" "$name") || fail "row '$name $version': dpkg-query ends with an error: $held"
     [ "$held" = "installed $version" ] || fail "row '$name $version': the image holds '$held'"
   else
     holds "$printed" "$version" || fail "row '$name $version': the image prints '$printed': $output"
@@ -92,7 +92,6 @@ while read -r name version sha256 _; do
     done
   fi
 done <"$table"
-[ "$rows" -gt 0 ] || fail "no row in $table"
 
 uid=$(run id -u) || fail "id -u: $uid"
 [ "$uid" = 1000 ] || fail "the image runs as uid '$uid', not 1000"

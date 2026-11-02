@@ -40,7 +40,7 @@ pins `redis-tools` and `redis-server` to that series, and `test.sh` reads the sa
 binaries to it. A project that serves Redis changes the line with its version stamp when its series
 changes, so a series never has a second number to keep equal. `test.sh` stops when the line is missing,
 appears twice or is not `<major>.<minor>`, and when either Redis row is missing or has no marker. The
-script `test-redis-series.sh` plants each of those defects and two wrong series, and holds that `test.sh`
+script `test-planted-defects.sh` plants each of those defects and two wrong series, and holds that `test.sh`
 refuses every one. The wrong series are `8.8`, which is older than the image's, and `8.1`, which a check
 that compares only the start of a version would take for any series from `8.10` to `8.19`.
 
@@ -108,16 +108,20 @@ git tag toolbox/v<major>.<minor>.<patch>
 git push origin toolbox/v<major>.<minor>.<patch>
 ```
 
-Test it on your machine before the push:
+The tests run on GitHub's runners, in the workflow, and never on a development machine: nothing here builds or
+runs the image locally. `test.sh` takes the image, then optionally a version table and a `Containerfile` in place
+of the two beside it. After the build, the workflow runs these on the image it builds:
 
-```
-docker build --file toolbox/Containerfile --tag toolbox:local toolbox/
-bash toolbox/test.sh toolbox:local
-bash toolbox/test-redis-series.sh toolbox:local
-```
-
-`test.sh` takes the image, then optionally a version table and a `Containerfile` in place of the two beside
-it. The workflow runs both scripts on the image it builds.
+- `test.sh`, which holds the image to every row and setting.
+- `test-planted.sh`, which holds the planted-defect scripts to their own rules without an image.
+- `test-planted-defects.sh`, which plants one defect for every check of `test.sh` (a wrong row, a wrong
+  `Containerfile`, or a copy of the image changed as root) and holds that `test.sh` ends with exit 1 and a
+  message that names the check. It also runs the unchanged copy, which `test.sh` accepts. It prints how many
+  checks of `test.sh` it covered and in how many of them it showed the refusal; it fails when a check
+  has no planted defect, so a new check needs its planted defect in the same change. The argument `--sites`
+  runs the coverage count alone, which needs no image.
+- `test-emcc-release.sh`, which builds the `install` stage with an `emcc` row that names another release than
+  the archive's and holds that the build stops with the message of the check.
 
 The build prints messages that are no failure and that it cannot clear:
 

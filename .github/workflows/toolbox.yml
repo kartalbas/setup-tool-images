@@ -48,34 +48,14 @@ jobs:
       - name: Test the image
         run: bash toolbox/test.sh toolbox:test
 
-      - name: Test that a wrong row is refused
-        run: |
-          innocent="${RUNNER_TEMP}/innocent.table"
-          cp toolbox/versions.table "${innocent}"
-          for planted_row in "yq v0.0.0" "pg_dumpall 0.0" "skopeo 0.0.0-1"; do
-            name="${planted_row% *}"
-            planted="${RUNNER_TEMP}/planted-${name}.table"
-            awk -v name="${name}" -v version="${planted_row#* }" '$1 == name { $2 = version } { print }' toolbox/versions.table >"${planted}"
-            if cmp -s toolbox/versions.table "${planted}"; then
-              echo "the planted table equals the table" >&2
-              exit 1
-            fi
-            status=0
-            bash toolbox/test.sh toolbox:test "${planted}" >"${RUNNER_TEMP}/planted.log" 2>&1 || status=$?
-            cat "${RUNNER_TEMP}/planted.log"
-            if [ "${status}" -ne 1 ]; then
-              echo "the planted row ended with ${status}, not 1" >&2
-              exit 1
-            fi
-            if ! grep -q -F -e "row '${planted_row}': the image prints" -e "row '${planted_row}': the image holds" "${RUNNER_TEMP}/planted.log"; then
-              echo "the refusal does not name the planted row" >&2
-              exit 1
-            fi
-          done
-          bash toolbox/test.sh toolbox:test "${innocent}"
+      - name: Test the planted-defect library
+        run: bash toolbox/test-planted.sh
 
-      - name: Test that a wrong Redis series is refused
-        run: bash toolbox/test-redis-series.sh toolbox:test
+      - name: Test that every check of the image test is refused when it is planted
+        run: bash toolbox/test-planted-defects.sh toolbox:test
+
+      - name: Test that a wrong emcc release is refused
+        run: bash toolbox/test-emcc-release.sh
 
       - name: Log in to ghcr.io
         if: startsWith(github.ref, 'refs/tags/toolbox/v')

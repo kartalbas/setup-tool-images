@@ -81,12 +81,13 @@ git push origin testbox/v<major>.<minor>.<patch>
 
 A new toolbox is taken in by editing the tag and the digest of `BASE` in the `Containerfile`.
 
-Test it on your machine before the push:
-
-```
-docker build --file testbox/Containerfile --tag testbox:local testbox/
-bash testbox/test.sh testbox:local
-```
+The tests run on GitHub's runners, in the workflow, and never on a development machine: nothing here builds or
+runs the image locally. After the build, the workflow runs `test.sh`, the toolbox's `test.sh` and
+`test-planted-defects.sh`. That script plants one defect for every check of `test.sh` (a wrong row, or a copy of the
+image changed as root) and holds that `test.sh` ends with exit 1 and a message that names the check. It prints how
+many checks it covered and in how many of them it showed the refusal, and it fails when a check has no planted
+defect. The argument `--sites` runs the coverage count alone, which needs no image. The workflow then runs the
+Redis group of the toolbox's `test-planted-defects.sh` on this image.
 
 The build prints one warning, from `update-alternatives`: it skips the man page link of `open`,
 because the base installs no man pages. That link comes from `xdg-utils`, which `chromium-common`
