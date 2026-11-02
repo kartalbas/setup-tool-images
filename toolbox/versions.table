@@ -1,10 +1,11 @@
 # The tools of the toolbox image, one row per tool, in install order.
 # Fields, separated by one space: <name> <version> <sha256> <address>
-# The sha256 is the one the upstream release publishes for the file at the address. The rows of the database clients are the exception:
-# their file is the signing key of the vendor's apt repository, for which no upstream checksum exists, so the sha256 is that of the key file
-# as read at the address, and apt then holds every package to the signature of the repository. A row with no sha256 and no
-# address is a package of the base's Debian archive: the name is the package's, the version is the exact one apt installs, and apt holds the
-# package to the signature of the archive.
+# The sha256 is the one the upstream release publishes for the file at the address. Two kinds of row are the exception. The rows of the database
+# clients: their file is the signing key of the vendor's apt repository, for which no upstream checksum exists, so the sha256 is that of the key
+# file as read at the address, and apt then holds every package to the signature of the repository. The row of emcc: upstream states only a
+# crc32c for its file, so the sha256 is the one measured on the file as read at the address. A row with no sha256 and no address is a package of
+# the base's Debian archive: the name is the package's, the version is the exact one apt installs, and apt holds the package to the signature
+# of the archive.
 #
 # node: newest LTS line (nodejs.org/dist/index.json); sha256 from https://nodejs.org/dist/v26.13.0/SHASUMS256.txt
 node 26.13.0 5848553868b402d3fabb5b09270649977780a390f832155721025a08b5104455 https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-x64.tar.gz
@@ -35,6 +36,12 @@ kubeconform v0.8.0 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287
 # rclone: newest release (https://downloads.rclone.org/version.txt). sha256 from the release file SHA256SUMS, whose PGP signature by the rclone
 # release key (https://rclone.org/KEYS, fingerprint FBF737ECE9F8AB18604BD2AC93935E02FF3B54FA) was checked
 rclone v1.75.2 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702 https://github.com/rclone/rclone/releases/download/v1.75.2/rclone-v1.75.2-linux-amd64.zip
+# emcc: the Emscripten release that emsdk installs, at the build hash that
+# https://raw.githubusercontent.com/emscripten-core/emsdk/main/emscripten-releases-tags.json names for 6.0.13, the newest release (aliases.latest).
+# Upstream publishes no sha256 for the file, only the crc32c 2944624a in the metadata of its storage object
+# https://storage.googleapis.com/storage/v1/b/webassembly/o/emscripten-releases-builds%2Flinux%2Feb132757325583b787fe9414b09afea9442b72ad%2Fwasm-binaries.tar.xz
+# which the downloaded file matches, so the sha256 is the one measured on that file. emsdk itself does not run: the build unpacks the release
+emcc 6.0.13 cda6801012ff3319a539111826ed02a9abd7eff135c2ef261c8941caf5a3763e https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/eb132757325583b787fe9414b09afea9442b72ad/wasm-binaries.tar.xz
 # skopeo: NOT THE NEWEST RELEASE ON PURPOSE (v1.24.1 of 2026-09-16 is out). Upstream containers/skopeo publishes no release file, its newest release
 # carries no asset, and trixie-backports carries no skopeo, so Debian's package is the one signed build. Read at https://packages.debian.org/trixie/skopeo
 # and in the trixie Packages index https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.xz. A newer build of the package replaces this

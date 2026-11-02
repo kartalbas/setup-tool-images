@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Usage: bash testbox/test.sh <image> [versions-table]
-# Holds every package of the table to its row in the image, then holds the user, the work folder and the two settings
-# the browser rows read, then runs the browser as the image's own user. Exit 1 on the first difference.
 set -u
 
 image=${1:?usage: test.sh <image> [versions-table]}
@@ -26,6 +23,14 @@ while read -r name version _; do
     printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+){3}' | head -n 1)
     [ "$printed" = "${version%%-*}" ] || fail "row '$name $version': the image prints '$printed': $output"
     printf 'ok chromium prints %s\n' "$printed"
+  fi
+  if [ "$name" = poppler-utils ]; then
+    for tool in pdftotext pdftoppm; do
+      output=$(run "$tool" -v) || fail "row '$name $version': $tool -v: $output"
+      printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+)+' | head -n 1)
+      [ "$printed" = "${version%%-*}" ] || fail "row '$name $version': $tool prints '$printed': $output"
+      printf 'ok %s prints %s\n' "$tool" "$printed"
+    done
   fi
 done <"$table"
 [ "$rows" -gt 0 ] || fail "no row in $table"

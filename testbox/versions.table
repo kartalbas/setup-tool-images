@@ -1,8 +1,6 @@
 # The Debian packages of the testbox image, one row per package the Containerfile installs.
 # Fields, separated by one space: <name> <version>
 # The name is the Debian package name. The version is the exact one apt installs, which verifies the archive signatures.
-# A line starting with # and an empty line are not rows.
-# Every value was read at its source on 2026-10-31, the make row on 2026-11-01.
 #
 # chromium: the newest version of the base's own suite, trixie with its security updates. Read at https://packages.debian.org/trixie/chromium
 # and in the Packages index https://deb.debian.org/debian-security/dists/trixie-security/main/binary-amd64/Packages.xz. The trixie index itself
@@ -20,3 +18,7 @@ fonts-liberation 1:2.1.5-3
 # make: the build tool a job runs to compile C sources with the toolbox's emcc, such as a WebAssembly sandbox. Read at
 # https://packages.debian.org/trixie/make and in the trixie Packages index https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.xz
 make 4.4.1-2
+# poppler-utils: the PDF tools pdftotext and pdftoppm, which the tests of PDF output run. Read at https://packages.debian.org/trixie/poppler-utils
+# and in the Packages indexes of trixie, trixie-updates and trixie-security, of which only trixie holds this build; its dependency libpoppler147 is
+# at the same version in the same index
+poppler-utils 25.03.0-5+deb13u4

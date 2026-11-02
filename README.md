@@ -46,8 +46,10 @@ says how it is bumped.
    [`toolbox/README.md`](toolbox/README.md) explains. The `redis-cli` and `redis-server` rows hold the
    marker `REDIS_VERSION` in place of a version, and a bump never edits them: their series is the
    `ARG REDIS_VERSION` line of `toolbox/Containerfile`, which the project that consumes the image
-   writes with its version stamp when its Redis series changes. The skopeo row is a package of the
-   base's Debian archive: its exact version, with no sha256 and no address.
+   writes with its version stamp when its Redis series changes. The `emcc` row is an exception too:
+   the upstream states only a crc32c for its file, so its sha256 is the one measured on the file. The
+   skopeo row is a package of the base's Debian archive: its exact version, with no sha256 and no
+   address.
 2. Commit to `master`. The workflow builds and tests the image and pushes nothing.
 3. Cut the tag `<image>/v<major>.<minor>.<patch>` on that commit and push it. The workflow builds,
    tests, pushes, signs and verifies.

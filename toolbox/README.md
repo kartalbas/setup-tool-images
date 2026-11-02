@@ -43,6 +43,19 @@ appears twice or is not `<major>.<minor>`, and when either Redis row is missing 
 script `test-redis-series.sh` plants each of those defects, a series older than the image, and the series
 `8.1` against an image of the series `8.10`, and holds that `test.sh` refuses every one.
 
+`emcc` is the Emscripten compiler for WebAssembly. Its row names the release archive of the SDK that
+`emsdk` installs; the build unpacks it to `/usr/local/emcc`, writes its configuration there and puts the
+launcher `/usr/local/bin/emcc` on the path. A job that compiles with it finds `emcc --version` printing the
+row's version between two spaces. Only `emcc` is on the path, not `em++`: a C++ source needs
+`-sDEFAULT_TO_CXX`.
+
+The configuration sets `FROZEN_CACHE = True`. Without it, `emcc` writes its cache into the image on the first
+run and stops with "cache directory is not writable" for every user but root, and in a pod with a read-only
+root file system for root too. With it, `emcc` never writes its cache and runs the same for every uid, and it
+uses only the libraries that the release carries ready-made. The limit: a build that needs a library or a port that is not in the release's cache
+(for example `-sUSE_ZLIB=1`) stops with a `PermissionError` in `cache/ports`. `test.sh` builds and runs a C
+program as uid 0, 1000 and 65532 to hold this.
+
 It runs as uid 1000 and starts in `/work`, which that user owns. `test.sh` holds both. It sets no
 entrypoint: the job that runs it sets the command.
 

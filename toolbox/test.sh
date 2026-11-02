@@ -12,6 +12,8 @@ docker image inspect "$image" >/dev/null 2>&1 || docker pull --quiet "$image" >/
 
 run() { docker run --rm "$image" "$@" 2>&1 </dev/null; }
 
+run_as() { local user=$1; shift; docker run --rm --user "$user" "$image" "$@" 2>&1 </dev/null; }
+
 version_output() {
   case "$1" in
     node) run node -v ;;
@@ -26,6 +28,7 @@ version_output() {
     kubectl) run kubectl version --client ;;
     kubeconform) run kubeconform -v ;;
     rclone) run rclone version ;;
+    emcc) run emcc --version ;;
     skopeo) run skopeo --version ;;
     mongodump) run mongodump --version ;;
     mongosh) run mongosh --version ;;
@@ -73,6 +76,19 @@ while read -r name version sha256 _; do
     holds "$printed" "$version" || fail "row '$name $version': the image prints '$printed': $output"
   fi
   printf 'ok %s %s (printed %s)\n' "$name" "$version" "$printed"
+  if [ "$name" = emcc ]; then
+    # A job that checks the compiler matches the version between two spaces in the output of emcc --version.
+    case "$output" in
+      *" $version "*) ;;
+      *) fail "row '$name $version': emcc --version does not print ' $version ': $output" ;;
+    esac
+    for emcc_user in 0 1000 65532; do
+      built=$(run_as "$emcc_user" sh -c 'cd "$(mktemp -d)" && printf "#include <stdio.h>\nint main(void) { puts(\"emcc-ok\"); return 0; }\n" >probe.c && emcc probe.c -o probe.js && node probe.js') ||
+        fail "row '$name $version': a build as uid $emcc_user ends with an error: $built"
+      [ "$built" = emcc-ok ] || fail "row '$name $version': the program built as uid $emcc_user prints '$built', not 'emcc-ok'"
+      printf 'ok emcc builds and runs a program as uid %s\n' "$emcc_user"
+    done
+  fi
 done <"$table"
 [ "$rows" -gt 0 ] || fail "no row in $table"
 

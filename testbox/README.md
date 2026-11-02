@@ -12,7 +12,8 @@ toolbox's versions.
 The rows of [`versions.table`](versions.table) are the Debian packages added to it: name and exact
 version. The `Containerfile` installs each row as `<name>=<version>` without recommended packages,
 and apt verifies the archive signatures. The table says where each version was read. `test.sh` holds
-every package to its row and holds the version that `chromium --version` prints to the `chromium` row.
+every package to its row, holds the version that `chromium --version` prints to the `chromium` row and
+holds the versions that `pdftotext -v` and `pdftoppm -v` print to the `poppler-utils` row.
 
 - `chromium` is Debian's own package from the suite of the base, trixie with its security updates.
 - `fonts-dejavu-core` and `fonts-liberation` are the only fonts added. DejaVu is the font that
@@ -22,6 +23,8 @@ every package to its row and holds the version that `chromium --version` prints 
   DejaVu Sans for `sans-serif` and Liberation Sans for `Arial`.
 - `make` is Debian's own package from trixie. A build that compiles C sources with the toolbox's
   `emcc` runs it.
+- `poppler-utils` is Debian's own package from trixie. It carries `pdftotext` and `pdftoppm`, which a job
+  that tests the text and the pages of a PDF runs.
 
 The image sets two variables for the jobs that start the browser:
 

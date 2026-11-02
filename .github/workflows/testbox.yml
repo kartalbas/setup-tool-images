@@ -53,25 +53,28 @@ jobs:
 
       - name: Test that a wrong row is refused
         run: |
-          planted="${RUNNER_TEMP}/planted.table"
           innocent="${RUNNER_TEMP}/innocent.table"
-          awk '$1 == "chromium" { $2 = "0.0.0-1" } { print }' testbox/versions.table >"${planted}"
           cp testbox/versions.table "${innocent}"
-          if cmp -s testbox/versions.table "${planted}"; then
-            echo "the planted table equals the table" >&2
-            exit 1
-          fi
-          status=0
-          bash testbox/test.sh testbox:test "${planted}" >"${RUNNER_TEMP}/planted.log" 2>&1 || status=$?
-          cat "${RUNNER_TEMP}/planted.log"
-          if [ "${status}" -ne 1 ]; then
-            echo "the planted row ended with ${status}, not 1" >&2
-            exit 1
-          fi
-          if ! grep -q "row 'chromium 0.0.0-1'" "${RUNNER_TEMP}/planted.log"; then
-            echo "the refusal does not name the planted row" >&2
-            exit 1
-          fi
+          for planted_row in "chromium 0.0.0-1" "poppler-utils 0.0.0-1"; do
+            name="${planted_row% *}"
+            planted="${RUNNER_TEMP}/planted-${name}.table"
+            awk -v name="${name}" -v version="${planted_row#* }" '$1 == name { $2 = version } { print }' testbox/versions.table >"${planted}"
+            if cmp -s testbox/versions.table "${planted}"; then
+              echo "the planted table equals the table" >&2
+              exit 1
+            fi
+            status=0
+            bash testbox/test.sh testbox:test "${planted}" >"${RUNNER_TEMP}/planted.log" 2>&1 || status=$?
+            cat "${RUNNER_TEMP}/planted.log"
+            if [ "${status}" -ne 1 ]; then
+              echo "the planted row ended with ${status}, not 1" >&2
+              exit 1
+            fi
+            if ! grep -q -F "row '${planted_row}'" "${RUNNER_TEMP}/planted.log"; then
+              echo "the refusal does not name the planted row" >&2
+              exit 1
+            fi
+          done
           bash testbox/test.sh testbox:test "${innocent}"
 
       - name: Test that a wrong Redis series is refused

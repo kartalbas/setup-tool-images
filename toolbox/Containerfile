@@ -5,7 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG REDIS_VERSION=8.10
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN apt-get update \
- && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip libatomic1 \
+ && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip xz-utils libatomic1 \
  && rm -rf /var/lib/apt/lists/*
 COPY versions.table /versions.table
 RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
@@ -36,6 +36,7 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
         promtool) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner "prometheus-${version}.linux-amd64/promtool" ;; \
         gitleaks) tar -xzf "$file" -C /usr/local/bin --no-same-owner gitleaks ;; \
         powershell) mkdir -p /opt/microsoft/powershell/7 && tar -xzf "$file" -C /opt/microsoft/powershell/7 --no-same-owner && chmod 0755 /opt/microsoft/powershell/7/pwsh && ln -s /opt/microsoft/powershell/7/pwsh /usr/local/bin/pwsh ;; \
+        emcc) mkdir /usr/local/emcc && tar -xJf "$file" -C /usr/local/emcc --strip-components=1 --no-same-owner && printf '"%s"\n' "$version" >/usr/local/emcc/emscripten/emscripten-version.txt && printf "LLVM_ROOT = '/usr/local/emcc/bin'\nBINARYEN_ROOT = '/usr/local/emcc'\nFROZEN_CACHE = True\n" >/usr/local/emcc/emscripten/.emscripten && printf '#!/bin/sh\nexec /usr/local/emcc/emscripten/emcc "$@"\n' >/usr/local/bin/emcc && chmod 0755 /usr/local/bin/emcc ;; \
         kubectl) install --mode 0755 "$file" /usr/local/bin/kubectl ;; \
         kubeconform) tar -xzf "$file" -C /usr/local/bin --no-same-owner kubeconform ;; \
         rclone) unzip -q -j "$file" "rclone-${version}-linux-amd64/rclone" -d /usr/local/bin && chmod 0755 /usr/local/bin/rclone ;; \
