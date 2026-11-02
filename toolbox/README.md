@@ -45,16 +45,21 @@ script `test-redis-series.sh` plants each of those defects, a series older than 
 
 `emcc` is the Emscripten compiler for WebAssembly. Its row names the release archive of the SDK that
 `emsdk` installs; the build unpacks it to `/usr/local/emcc`, writes its configuration there and puts the
-launcher `/usr/local/bin/emcc` on the path. A job that compiles with it finds `emcc --version` printing the
-row's version between two spaces. Only `emcc` is on the path, not `em++`: a C++ source needs
-`-sDEFAULT_TO_CXX`.
+launcher `/usr/local/bin/emcc` on the path. The archive's `emscripten-version.txt` names its release as
+`<version>-git`. The build stops when that is not the row's version, and then writes the plain version
+there, as `emsdk` does. A job that compiles with it finds `emcc --version` printing the row's version
+between two spaces. Only `emcc` is on the path, not `em++`: a C++ source needs `-sDEFAULT_TO_CXX`.
 
-The configuration sets `FROZEN_CACHE = True`. Without it, `emcc` writes its cache into the image on the first
-run and stops with "cache directory is not writable" for every user but root, and in a pod with a read-only
-root file system for root too. With it, `emcc` never writes its cache and runs the same for every uid, and it
-uses only the libraries that the release carries ready-made. The limit: a build that needs a library or a port that is not in the release's cache
-(for example `-sUSE_ZLIB=1`) stops with a `PermissionError` in `cache/ports`. `test.sh` builds and runs a C
-program as uid 0, 1000 and 65532 to hold this.
+The configuration sets `FROZEN_CACHE = True`. Without it, `emcc` writes into its cache in the image whenever
+a build needs a file that the cache lacks. Only root can write there, and in a pod with a read-only root file
+system not even root. With it, `emcc` never writes its cache and runs the same for every uid. It links only
+the libraries that the cache holds: those the release carries, and the `-flto` variants that the build adds
+with `embuilder` for a C program at `-O0`, `-O2` and `-Oz`. Their list is the `embuilder` line of the
+`Containerfile`. A build that needs another library stops with "FROZEN_CACHE is set, but cache file is
+missing" and the name of the file. A build that needs a port, for example `-sUSE_ZLIB=1`, stops with a
+`PermissionError` in `cache/ports`, and as root with "Attempt to lock the cache but FROZEN_CACHE is set".
+`test.sh` builds and runs a C program as uid 0, 1000 and 65532, without `-flto` and with it at `-O0`, `-O2`
+and `-Oz`.
 
 It runs as uid 1000 and starts in `/work`, which that user owns. `test.sh` holds both. It sets no
 entrypoint: the job that runs it sets the command.

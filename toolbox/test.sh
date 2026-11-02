@@ -83,10 +83,12 @@ while read -r name version sha256 _; do
       *) fail "row '$name $version': emcc --version does not print ' $version ': $output" ;;
     esac
     for emcc_user in 0 1000 65532; do
-      built=$(run_as "$emcc_user" sh -c 'cd "$(mktemp -d)" && printf "#include <stdio.h>\nint main(void) { puts(\"emcc-ok\"); return 0; }\n" >probe.c && emcc probe.c -o probe.js && node probe.js') ||
-        fail "row '$name $version': a build as uid $emcc_user ends with an error: $built"
-      [ "$built" = emcc-ok ] || fail "row '$name $version': the program built as uid $emcc_user prints '$built', not 'emcc-ok'"
-      printf 'ok emcc builds and runs a program as uid %s\n' "$emcc_user"
+      for emcc_flags in "" "-O0 -flto" "-O2 -flto" "-Oz -flto"; do
+        built=$(run_as "$emcc_user" sh -c 'cd "$(mktemp -d)" && printf "#include <stdio.h>\nint main(void) { puts(\"emcc-ok\"); return 0; }\n" >probe.c && emcc $1 probe.c -o probe.js && node probe.js' sh "$emcc_flags") ||
+          fail "row '$name $version': a build with flags '$emcc_flags' as uid $emcc_user ends with an error: $built"
+        [ "$built" = emcc-ok ] || fail "row '$name $version': the program built with flags '$emcc_flags' as uid $emcc_user prints '$built', not 'emcc-ok'"
+        printf "ok emcc builds and runs a program with flags '%s' as uid %s\n" "$emcc_flags" "$emcc_user"
+      done
     done
   fi
 done <"$table"
