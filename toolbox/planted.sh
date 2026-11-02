@@ -16,7 +16,6 @@ differs() {
   ! cmp -s "$1" "$2" || fail "the planted $2 equals $1"
 }
 
-# A check is named by a phrase that stands in its fail line of $script and in the refusal it prints.
 refuses() {
   local label=$1 phrase=$2 expected=$3 status=0
   shift 3
@@ -55,7 +54,6 @@ accepts() {
 
 mutation() { cat >"$scratch/$1.mutation"; }
 
-# Commits a copy of $image that the mutation script, read from stdin, changed as root; the tag is left in planted_tag.
 planted_image() {
   local name=$1 container
   shift
@@ -84,7 +82,6 @@ accepts_in_planted_image() {
   accepts "$name" bash "$script" "$planted_tag" "$rows"
 }
 
-# complete is yes where the planted defects must cover every check of $script, and no for one group of them.
 planted_report() {
   local complete=$1 sites occurrences phrase matching count covered shown_red=0 valid problems=0 verdict
   sites=$(grep -c 'fail "' "$script")

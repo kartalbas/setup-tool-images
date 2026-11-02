@@ -73,7 +73,6 @@ redis_plants() {
   accepts "the unchanged Containerfile and Redis rows" bash "$script" "$image" "$redis_rows" "$scratch/Containerfile-copy"
 }
 
-# The wrapper runs the fragment before every emcc call except emcc --version.
 refuses_emcc_wrapper() {
   local name=$1 phrase=$2 expected=$3 fragment=$4
   refuses_in_planted_image "$name" "$phrase" "$expected" "$emcc_rows" <<EOF

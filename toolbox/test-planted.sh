@@ -24,7 +24,6 @@ EOF
 
 cases=0
 
-# case <label> <wanted exit status> <wanted text in the output> <body>
 case_runs() {
   local label=$1 wanted=$2 text=$3 body=$4 status=0
   cases=$((cases + 1))

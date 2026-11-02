@@ -20,7 +20,6 @@ trap 'rm -rf "$scratch"' EXIT
 
 row_version() { awk -v name="$1" '$1 == name { print $2 }' "$table"; }
 
-# The wrapper stands in /usr/local/bin before /usr/bin in the PATH and runs the fragment before the real tool.
 refuses_in_wrapper() {
   local name=$1 phrase=$2 expected=$3 tool=$4 fragment=$5
   refuses_in_planted_image "$name" "$phrase" "$expected" "$table" <<EOF
