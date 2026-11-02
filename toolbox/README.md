@@ -77,17 +77,6 @@ Three rows are not installed the way their package's name suggests:
   `/etc/containers/policy.json`, comes with the dependency `golang-github-containers-common`, and `test.sh` holds that
   file: skopeo refuses every copy without a policy, and its version print does not show it.
 
-## Build and test it
-
-```
-docker build -f toolbox/Containerfile -t toolbox:local toolbox
-bash toolbox/test.sh toolbox:local
-bash toolbox/test-redis-series.sh toolbox:local
-```
-
-`test.sh` takes the image, then optionally a version table and a `Containerfile` in place of the two beside
-it. The workflow runs the same three commands on the image it builds.
-
 ## Use it
 
 ```
@@ -124,7 +113,11 @@ Test it on your machine before the push:
 ```
 docker build --file toolbox/Containerfile --tag toolbox:local toolbox/
 bash toolbox/test.sh toolbox:local
+bash toolbox/test-redis-series.sh toolbox:local
 ```
+
+`test.sh` takes the image, then optionally a version table and a `Containerfile` in place of the two beside
+it. The workflow runs both scripts on the image it builds.
 
 The build prints messages that are no failure and that it cannot clear:
 
