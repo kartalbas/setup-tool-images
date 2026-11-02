@@ -2,6 +2,7 @@ ARG BASE=debian:trixie-20261027-slim@sha256:1e1a22175fbf1b32157ddaf0219e1db4e540
 
 FROM ${BASE} AS install
 ARG DEBIAN_FRONTEND=noninteractive
+ARG REDIS_VERSION=8.10
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends ca-certificates curl tar gzip unzip libatomic1 \
@@ -16,7 +17,9 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
       && echo "$6" >>/vendor-apt/packages; \
     } \
  && redis_pin() { \
-      printf 'Package: redis-server redis-tools\nPin: version 6:%s.*\nPin-Priority: 1001\n' "$1" >/vendor-apt/preferences/redis; \
+      [ "$1" = REDIS_VERSION ] || { echo "versions.table: a Redis row holds the marker REDIS_VERSION, not '$1'" >&2; exit 1; }; \
+      [[ "$REDIS_VERSION" =~ ^[0-9]+\.[0-9]+$ ]] || { echo "Containerfile: REDIS_VERSION is '$REDIS_VERSION', not <major>.<minor>" >&2; exit 1; }; \
+      printf 'Package: redis-server redis-tools\nPin: version 6:%s.*\nPin-Priority: 1001\n' "$REDIS_VERSION" >/vendor-apt/preferences/redis; \
     } \
  && while read -r name version sha256 address; do \
       if [ -z "$address" ]; then echo "${name}=${version}" >>/vendor-apt/packages; continue; fi; \

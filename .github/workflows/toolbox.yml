@@ -74,6 +74,9 @@ jobs:
           done
           bash toolbox/test.sh toolbox:test "${innocent}"
 
+      - name: Test that a wrong Redis series is refused
+        run: bash toolbox/test-redis-series.sh toolbox:test
+
       - name: Log in to ghcr.io
         if: startsWith(github.ref, 'refs/tags/toolbox/v')
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0

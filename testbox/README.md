@@ -44,7 +44,8 @@ The `Containerfile` copies `versions.table` in for the install step and deletes 
 `test.sh` holds that no `/versions.table` is left in the filesystem. The copy stays in the layer of
 its `COPY` instruction.
 
-`test.sh` does not run the tools of the toolbox: the toolbox's own `test.sh` holds those.
+`test.sh` does not run the tools of the toolbox: the toolbox's own `test.sh` holds those, and the workflow
+runs it against this image too.
 
 ## Use it
 

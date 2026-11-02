@@ -25,14 +25,23 @@ series.
 | `mongodump` | `mongodb-database-tools` | MongoDB 8.0 | the exact version |
 | `mongosh` | `mongodb-mongosh` | MongoDB 8.0 | the exact version |
 | `pg_dumpall` | `postgresql-client-18` | PostgreSQL 18 | the major, `18` |
-| `redis-cli` | `redis-tools` | Redis 8.8 | the series, `8.8` |
-| `redis-server` | `redis-server` | Redis 8.8 | the series, `8.8` |
+| `redis-cli` | `redis-tools` | Redis, the series of `ARG REDIS_VERSION` | the marker `REDIS_VERSION` |
+| `redis-server` | `redis-server` | Redis, the series of `ARG REDIS_VERSION` | the marker `REDIS_VERSION` |
 | `mariadb` | `mariadb-client` | MariaDB 12.3 | the series, `12.3` |
 
 MongoDB's database tools and mongosh are numbered apart from the server, and the repositories of the
 series 7.0 and 8.0 carry the same builds. Their rows are therefore the exact versions, and the series is the
 repository that the address of the signing key names. A database server that leaves its series needs a toolbox
 cut: edit the row, and for MongoDB its key address too, then cut the tag.
+
+The Redis series is not in the rows. It is the one `ARG REDIS_VERSION=<major>.<minor>` line of the
+[`Containerfile`](Containerfile), and both Redis rows hold the marker `REDIS_VERSION` in its place. The build
+pins `redis-tools` and `redis-server` to that series, and `test.sh` reads the same line to hold both
+binaries to it. A project that serves Redis changes the line with its version stamp when its series
+changes, so a series never has a second number to keep equal. `test.sh` stops when the line is missing,
+appears twice or is not `<major>.<minor>`, and when either Redis row is missing or has no marker. The
+script `test-redis-series.sh` plants each of those defects, a series older than the image, and the series
+`8.1` against an image of the series `8.10`, and holds that `test.sh` refuses every one.
 
 It runs as uid 1000 and starts in `/work`, which that user owns. `test.sh` holds both. It sets no
 entrypoint: the job that runs it sets the command.

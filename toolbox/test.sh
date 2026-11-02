@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
-# Usage: bash toolbox/test.sh <image> [versions-table]
-# Runs every tool of the table in the image as the image's own user and holds the printed version to
-# its row, then holds the user, the work folder and the tools of the test pod. A row of three numbers is held
-# to that exact version; a row of one or two numbers is a series, and the printed version must start with it.
-# A row with no sha256 is a package of the base's archive, held to its exact version as dpkg records it.
-# Exit 1 on the first difference.
 set -u
 
-image=${1:?usage: test.sh <image> [versions-table]}
+image=${1:?usage: test.sh <image> [versions-table [containerfile]]}
 table=${2:-$(dirname "$0")/versions.table}
+containerfile=${3:-$(dirname "$0")/Containerfile}
 
 fail() { printf 'FAIL %s\n' "$*" >&2; exit 1; }
 
@@ -17,7 +12,7 @@ docker image inspect "$image" >/dev/null 2>&1 || docker pull --quiet "$image" >/
 
 run() { docker run --rm "$image" "$@" 2>&1 </dev/null; }
 
-version_output() { # <row name> -> what the tool prints for its version
+version_output() {
   case "$1" in
     node) run node -v ;;
     npm) run npm -v ;;
@@ -42,18 +37,33 @@ version_output() { # <row name> -> what the tool prints for its version
   esac
 }
 
-holds() { # <printed version> <version of the row>
-  local wanted=${2#v}
+holds() {
+  local printed=$1 wanted=${2#v}
   case "$wanted" in
-    *.*.*) [ "$1" = "$wanted" ] ;;
-    *) [[ "$1" == "$wanted".* ]] ;;
+    *.*.*) [ "$printed" = "$wanted" ] ;;
+    *) [[ "$printed" == "$wanted".* ]] ;;
   esac
 }
+
+[ -r "$containerfile" ] || fail "cannot read $containerfile"
+redis_arguments=$(grep -c -E '^ARG REDIS_VERSION=' "$containerfile")
+[ "$redis_arguments" = 1 ] || fail "$containerfile holds $redis_arguments lines 'ARG REDIS_VERSION=', not one"
+redis_series=$(sed -n 's/^ARG REDIS_VERSION=//p' "$containerfile")
+[[ "$redis_series" =~ ^[0-9]+\.[0-9]+$ ]] || fail "$containerfile: ARG REDIS_VERSION is '$redis_series', not <major>.<minor>"
+for tool in redis-cli redis-server; do
+  redis_rows=$(awk -v tool="$tool" '$1 == tool' "$table" | wc -l)
+  [ "$redis_rows" = 1 ] || fail "$table holds $redis_rows rows for $tool, not one"
+done
 
 rows=0
 while read -r name version sha256 _; do
   case "$name" in '' | '#'*) continue ;; esac
   rows=$((rows + 1))
+  case "$name" in
+    redis-cli | redis-server)
+      [ "$version" = REDIS_VERSION ] || fail "row '$name $version': a Redis row holds the marker REDIS_VERSION"
+      version=$redis_series ;;
+  esac
   output=$(version_output "$name") || fail "row '$name $version': $output"
   printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+)+' | head -n 1)
   if [ -z "$sha256" ]; then
