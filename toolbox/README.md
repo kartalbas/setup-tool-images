@@ -40,8 +40,9 @@ pins `redis-tools` and `redis-server` to that series, and `test.sh` reads the sa
 binaries to it. A project that serves Redis changes the line with its version stamp when its series
 changes, so a series never has a second number to keep equal. `test.sh` stops when the line is missing,
 appears twice or is not `<major>.<minor>`, and when either Redis row is missing or has no marker. The
-script `test-redis-series.sh` plants each of those defects, a series older than the image, and the series
-`8.1` against an image of the series `8.10`, and holds that `test.sh` refuses every one.
+script `test-redis-series.sh` plants each of those defects and two wrong series, and holds that `test.sh`
+refuses every one. The wrong series are `8.8`, which is older than the image's, and `8.1`, which a check
+that compares only the start of a version would take for any series from `8.10` to `8.19`.
 
 `emcc` is the Emscripten compiler for WebAssembly. Its row names the release archive of the SDK that
 `emsdk` installs; the build unpacks it to `/usr/local/emcc`, writes its configuration there and puts the
