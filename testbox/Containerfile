@@ -1,4 +1,4 @@
-ARG BASE=ghcr.io/kartalbas/toolbox:1.3.0@sha256:63f6da2d9dc1eff591ace4a446d66cd8e9795b48c7b12550a96e182787d814d6
+ARG BASE=ghcr.io/kartalbas/toolbox:1.3.2@sha256:c684ddd9e8aa3847cfcba7b504587732b83522abe3f39bdac6bea6e83ddc1510
 
 FROM ${BASE}
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
