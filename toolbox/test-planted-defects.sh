@@ -154,6 +154,17 @@ WRAPPER
 chmod 0755 /usr/bin/mongod
 EOF
 
+  refuses_in_planted_image mongod-needs-network "does not answer ping" "row 'mongod $(row_version mongod)': a mongod started as uid 1000 on 127.0.0.1 with no network does not answer ping" "$(table_of mongod)" <<'EOF'
+mv /usr/bin/mongod /usr/bin/mongod.real
+cat >/usr/bin/mongod <<'WRAPPER'
+#!/bin/sh
+case " $* " in *" --version "*) exec /usr/bin/mongod.real "$@" ;; esac
+[ "$(ls /sys/class/net)" != lo ] || { echo "planted: mongod needs a network" >&2; exit 1; }
+exec /usr/bin/mongod.real "$@"
+WRAPPER
+chmod 0755 /usr/bin/mongod
+EOF
+
   refuses_in_planted_image no-go "the version command ends with an error" "row 'go $(row_version go)': the version command ends with an error" "$go_rows" <<'EOF'
 rm -f /usr/local/bin/go
 EOF
@@ -162,11 +173,18 @@ EOF
 rm -f /usr/local/bin/go
 EOF
 
+  refuses_in_planted_image no-gofmt-row "is not in the image" "gofmt is not in the image" "$small" <<'EOF'
+rm -f /usr/local/bin/gofmt
+EOF
+
   refuses_go_wrapper go-no-build "does not build" "a one-file module as uid 1000 with no network does not build" \
     'echo "planted: go does not build" >&2; exit 1'
   # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
   refuses_go_wrapper go-uid-1000 "does not build" "a one-file module as uid 1000 with no network does not build" \
     '[ "$(id -u)" != 1000 ] || { echo "planted: uid 1000 is refused" >&2; exit 1; }'
+  # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
+  refuses_go_wrapper go-needs-network "does not build" "a one-file module as uid 1000 with no network does not build" \
+    '[ "$(ls /sys/class/net)" != lo ] || { echo "planted: go needs a network" >&2; exit 1; }'
   # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
   refuses_go_wrapper go-wrong-output "the one-file module built" "the one-file module built as uid 1000 prints 'planted', not 'go-ok'" \
     '[ "$1" != build ] || { printf "#!/bin/sh\necho planted\n" >probe; chmod 0755 probe; exit 0; }'
