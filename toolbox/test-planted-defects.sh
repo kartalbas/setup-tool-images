@@ -143,6 +143,10 @@ EOF
 rm -f /usr/bin/mongod
 EOF
 
+  refuses_in_planted_image mongoms-unset "does not name the image's mongod" "MONGOMS_SYSTEM_BINARY does not name the image's mongod" "$small" --change 'ENV MONGOMS_SYSTEM_BINARY=' <<'EOF'
+true
+EOF
+
   refuses_in_planted_image mongod-no-start "does not answer ping" "row 'mongod $(row_version mongod)': a mongod started as uid 1000 on 127.0.0.1 with no network does not answer ping" "$(table_of mongod)" <<'EOF'
 mv /usr/bin/mongod /usr/bin/mongod.real
 cat >/usr/bin/mongod <<'WRAPPER'

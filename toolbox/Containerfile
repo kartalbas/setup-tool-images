@@ -75,5 +75,7 @@ COPY --from=install /opt/microsoft /opt/microsoft
 RUN groupadd --gid 1000 toolbox \
  && useradd --uid 1000 --gid 1000 --home-dir /work --no-create-home --shell /bin/bash toolbox \
  && install --directory --owner 1000 --group 1000 /work
+# mongodb-memory-server reads this, so a test starts the image's mongod and downloads none, which a test pod cannot.
+ENV MONGOMS_SYSTEM_BINARY=/usr/bin/mongod
 USER 1000
 WORKDIR /work
