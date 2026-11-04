@@ -85,6 +85,7 @@ while read -r name version sha256 _; do
     esac
     for emcc_user in 0 1000 65532; do
       for emcc_flags in "" "-O0 -flto" "-O2 -flto" "-Oz -flto"; do
+        # shellcheck disable=SC2016 # the script expands in the container's sh
         built=$(run_as "$emcc_user" sh -c 'cd "$(mktemp -d)" && printf "#include <stdio.h>\nint main(void) { puts(\"emcc-ok\"); return 0; }\n" >probe.c && emcc $1 probe.c -o probe.js && node probe.js' sh "$emcc_flags") ||
           fail "row '$name $version': a build with flags '$emcc_flags' as uid $emcc_user ends with an error: $built"
         [ "$built" = emcc-ok ] || fail "row '$name $version': the program built with flags '$emcc_flags' as uid $emcc_user prints '$built', not 'emcc-ok'"
@@ -93,7 +94,7 @@ while read -r name version sha256 _; do
     done
   fi
   if [ "$name" = mongod ]; then
-    # A test pod starts its own mongod as uid 1000 with no route out, so the probe runs the way the pod does.
+    # A test pod runs as uid 1000 and its fence reaches no vendor host, so the server has to start with neither root nor a network.
     answer=$(docker run --rm --network none --user 1000 "$image" sh -c 'd=$(mktemp -d) && mongod --dbpath "$d" --bind_ip 127.0.0.1 --port 27017 --fork --logpath "$d/mongod.log" >/dev/null && mongosh --quiet --port 27017 --eval "db.runCommand({ping: 1}).ok"' 2>&1 </dev/null) && [ "$answer" = 1 ] ||
       fail "row '$name $version': a mongod started as uid 1000 on 127.0.0.1 with no network does not answer ping: $answer"
     printf 'ok mongod answers ping as uid 1000 with no network\n'
