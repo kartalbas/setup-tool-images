@@ -17,6 +17,8 @@ npm 12.2.1 228bd64aaef23270dbdbd2cf3d5ef5c467602ef38c4066246cef1984adab9a67 http
 pnpm 12.16.1 565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825 https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-linux-x64.tar.gz
 # dart: stable channel (VERSION file of the stable channel); sha256 from the .sha256sum beside the file in the dart-archive
 dart 3.13.7 eb99aed266efbcb615c6ae21c12f52cfe935b9f208bccc5fea7f64c21e867229 https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.7/sdk/dartsdk-linux-x64-release.zip
+# go: newest stable release from https://go.dev/dl/?mode=json (go1.27.3, the first entry, stable true); sha256 of the linux-amd64 archive from that answer
+go 1.27.3 65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
 # helm: newest release; sha256 from https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz.sha256sum
 helm v4.3.1 0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz
 # yq: newest release; sha256 is the SHA-256 column of the release file "checksums", ordered by its file "checksums_hashes_order"

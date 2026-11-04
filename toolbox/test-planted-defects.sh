@@ -87,12 +87,28 @@ chmod 0755 /usr/local/bin/emcc
 EOF
 }
 
+# The go link of the image is replaced by a wrapper that answers "go version" as the real tool and runs the fragment before any other command.
+refuses_go_wrapper() {
+  local name=$1 phrase=$2 expected=$3 fragment=$4
+  refuses_in_planted_image "$name" "$phrase" "$expected" "$go_rows" <<EOF
+rm -f /usr/local/bin/go
+cat >/usr/local/bin/go <<'WRAPPER'
+#!/bin/sh
+case "\$1" in version) exec /usr/local/go/bin/go "\$@" ;; esac
+$fragment
+exec /usr/local/go/bin/go "\$@"
+WRAPPER
+chmod 0755 /usr/local/bin/go
+EOF
+}
+
 image_plants() {
   local small three emcc_version planted_row name phrase uid
   small=$(table_of yq)
   three=$(table_of yq pg_dumpall skopeo mongod)
   emcc_rows=$(table_of emcc)
   emcc_version=$(row_version emcc)
+  go_rows=$(table_of go)
 
   refuses "the image cannot be pulled" "cannot pull" "cannot pull registry.invalid/absent:0" bash "$script" registry.invalid/absent:0 "$small"
 
@@ -106,6 +122,10 @@ image_plants() {
     differs "$three" "$scratch/planted-$name.table"
     refuses "row $planted_row" "$phrase" "row '$planted_row': $phrase" bash "$script" "$image" "$scratch/planted-$name.table"
   done
+
+  awk -v version=0.0.0 '$1 == "go" { $2 = version } { print }' "$go_rows" >"$scratch/planted-go.table"
+  differs "$go_rows" "$scratch/planted-go.table"
+  refuses "row go 0.0.0" "the image prints" "row 'go 0.0.0': the image prints" bash "$script" "$image" "$scratch/planted-go.table"
 
   { cat "$small"; echo "planted 1.0.0 00"; } >"$scratch/planted-unknown.table"
   refuses "a row without a version command" "the version command ends with an error" \
@@ -133,6 +153,23 @@ exit 1
 WRAPPER
 chmod 0755 /usr/bin/mongod
 EOF
+
+  refuses_in_planted_image no-go "the version command ends with an error" "row 'go $(row_version go)': the version command ends with an error" "$go_rows" <<'EOF'
+rm -f /usr/local/bin/go
+EOF
+
+  refuses_in_planted_image no-go-row "is not in the image" "go is not in the image" "$small" <<'EOF'
+rm -f /usr/local/bin/go
+EOF
+
+  refuses_go_wrapper go-no-build "does not build" "a one-file module as uid 1000 with no network does not build" \
+    'echo "planted: go does not build" >&2; exit 1'
+  # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
+  refuses_go_wrapper go-uid-1000 "does not build" "a one-file module as uid 1000 with no network does not build" \
+    '[ "$(id -u)" != 1000 ] || { echo "planted: uid 1000 is refused" >&2; exit 1; }'
+  # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
+  refuses_go_wrapper go-wrong-output "the one-file module built" "the one-file module built as uid 1000 prints 'planted', not 'go-ok'" \
+    '[ "$1" != build ] || { printf "#!/bin/sh\necho planted\n" >probe; chmod 0755 probe; exit 0; }'
 
   refuses_in_planted_image no-dpkg-query "dpkg-query ends with an error" "row 'skopeo $(row_version skopeo)': dpkg-query ends with an error" "$(table_of skopeo)" <<'EOF'
 rm -f /usr/bin/dpkg-query

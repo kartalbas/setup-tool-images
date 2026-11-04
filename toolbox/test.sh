@@ -20,6 +20,7 @@ version_output() {
     npm) run npm -v ;;
     pnpm) run pnpm -v ;;
     dart) run dart --version ;;
+    go) run go version ;;
     helm) run helm version --short ;;
     yq) run yq --version ;;
     promtool) run promtool --version ;;
@@ -99,6 +100,13 @@ while read -r name version sha256 _; do
       fail "row '$name $version': a mongod started as uid 1000 on 127.0.0.1 with no network does not answer ping: $answer"
     printf 'ok mongod answers ping as uid 1000 with no network\n'
   fi
+  if [ "$name" = go ]; then
+    # A test pod runs as uid 1000 and its fence reaches no vendor host, so a build needs only a writable HOME and GOCACHE and no network (GOPROXY=off makes a module download an error).
+    built=$(docker run --rm --network none --user 1000 "$image" sh -c 'd=$(mktemp -d) && cd "$d" && export HOME="$d" GOCACHE="$d/cache" GOPROXY=off && printf "module probe\n\ngo 1.24\n" >go.mod && printf "package main\n\nimport \"fmt\"\n\nfunc main() { fmt.Println(\"go-ok\") }\n" >main.go && go build -buildvcs=false -o probe . && ./probe' 2>&1 </dev/null) ||
+      fail "row '$name $version': a one-file module as uid 1000 with no network does not build: $built"
+    [ "$built" = go-ok ] || fail "row '$name $version': the one-file module built as uid 1000 prints '$built', not 'go-ok'"
+    printf 'ok go builds and runs a one-file module as uid 1000 with no network\n'
+  fi
 done <"$table"
 
 uid=$(run id -u) || fail "id -u: $uid"
@@ -110,7 +118,7 @@ output=$(run pwd) || fail "pwd: $output"
 output=$(run sh -c 'touch /work/.write-probe && rm /work/.write-probe') || fail "/work is not writable by uid $uid: $output"
 printf 'ok /work is writable\n'
 
-for tool in git jq curl openssl od tr ps python3 ssh mongod; do
+for tool in git jq curl openssl od tr ps python3 ssh mongod go; do
   output=$(run sh -c 'command -v "$1"' sh "$tool") || fail "$tool is not in the image"
   printf 'ok %s at %s\n' "$tool" "$output"
 done

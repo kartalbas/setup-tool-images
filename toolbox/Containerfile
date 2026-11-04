@@ -31,6 +31,7 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
         npm) npm install --global --ignore-scripts --offline --no-update-notifier "$file" ;; \
         pnpm) mkdir /usr/local/pnpm && tar -xzf "$file" -C /usr/local/pnpm --no-same-owner && ln -s /usr/local/pnpm/pnpm /usr/local/bin/pnpm ;; \
         dart) unzip -q "$file" -d /fetch/dart && mv /fetch/dart/dart-sdk /usr/local/dart && ln -s /usr/local/dart/bin/dart /usr/local/bin/dart ;; \
+        go) tar -xzf "$file" -C /usr/local --no-same-owner && ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt ;; \
         helm) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner linux-amd64/helm ;; \
         yq) install --mode 0755 "$file" /usr/local/bin/yq ;; \
         promtool) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner "prometheus-${version}.linux-amd64/promtool" ;; \
