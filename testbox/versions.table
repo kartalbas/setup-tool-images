@@ -5,7 +5,7 @@
 # chromium: the newest version of the base's own suite, trixie with its security updates. Read at https://packages.debian.org/trixie/chromium
 # and in the Packages index https://deb.debian.org/debian-security/dists/trixie-security/main/binary-amd64/Packages.xz. The trixie index itself
 # still holds 150.0.7871.181-1~deb13u1. A security update replaces its predecessor in the archive, so the build stops at this row until it is bumped.
-chromium 156.0.8078.73-1~deb13u1
+chromium 156.0.8078.79-1~deb13u1
 # fonts-dejavu-core: the font fontconfig prefers for the families sans-serif, serif and monospace, and the first of the font alternatives that
 # fontconfig-config, which chromium needs, names. Without it, a page that asks for system-ui got the letter widths of a monospace font. Read at
 # https://packages.debian.org/trixie/fonts-dejavu-core and in the trixie Packages index
