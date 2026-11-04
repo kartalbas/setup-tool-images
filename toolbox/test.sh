@@ -126,6 +126,9 @@ done
 output=$(run sh -c 'test "$MONGOMS_SYSTEM_BINARY" = /usr/bin/mongod && test -x "$MONGOMS_SYSTEM_BINARY" && printf %s "$MONGOMS_SYSTEM_BINARY"') || fail "MONGOMS_SYSTEM_BINARY does not name the image's mongod: '$output'"
 printf 'ok MONGOMS_SYSTEM_BINARY names %s\n' "$output"
 
+output=$(run sh -c 'v=$(mongod --version | sed -n "s/^db version v//p") && test -n "$v" && test "$MONGOMS_VERSION" = "$v" && printf %s "$v"') || fail "MONGOMS_VERSION is not the version of the image's mongod: '$output'"
+printf 'ok MONGOMS_VERSION names mongod %s\n' "$output"
+
 run sh -c 'test -f /etc/containers/policy.json && test -s /etc/containers/policy.json' >/dev/null || fail "/etc/containers/policy.json is not a non-empty file of the image, and skopeo refuses every copy without a trust policy"
 printf 'ok /etc/containers/policy.json is a non-empty file\n'
 

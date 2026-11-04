@@ -107,8 +107,9 @@ runs the image locally. `test.sh` takes the image, then optionally a version tab
 of the two beside it. After the build, the workflow runs these on the image it builds:
 
 - `test.sh`, which holds the image to every row and setting. It also starts a `mongod` as uid 1000 with no network
-  and holds that it answers a ping, and that `MONGOMS_SYSTEM_BINARY` names that `mongod`, so mongodb-memory-server
-  starts it and downloads none. It builds a one-file Go module as uid 1000 with no network, and holds that the
+  and holds that it answers a ping, that `MONGOMS_SYSTEM_BINARY` names that `mongod`, so mongodb-memory-server
+  starts it and downloads none, and that `MONGOMS_VERSION` is the version that `mongod` prints, so it warns of no
+  version conflict. It builds a one-file Go module as uid 1000 with no network, and holds that the
   program runs. That module imports only the standard library, so this says nothing about module downloads.
 - `test-planted.sh`, which holds the planted-defect scripts to their own rules without an image.
 - `test-planted-defects.sh`, which plants one defect for every check of `test.sh` (a wrong row, a wrong
