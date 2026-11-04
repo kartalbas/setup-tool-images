@@ -32,6 +32,7 @@ version_output() {
     skopeo) run skopeo --version ;;
     mongodump) run mongodump --version ;;
     mongosh) run mongosh --version ;;
+    mongod) run mongod --version ;;
     pg_dumpall) run pg_dumpall --version ;;
     redis-cli) run redis-cli --version ;;
     redis-server) run redis-server --version ;;
@@ -91,6 +92,12 @@ while read -r name version sha256 _; do
       done
     done
   fi
+  if [ "$name" = mongod ]; then
+    # A test pod starts its own mongod as uid 1000 with no route out, so the probe runs the way the pod does.
+    answer=$(docker run --rm --network none --user 1000 "$image" sh -c 'd=$(mktemp -d) && mongod --dbpath "$d" --bind_ip 127.0.0.1 --port 27017 --fork --logpath "$d/mongod.log" >/dev/null && mongosh --quiet --port 27017 --eval "db.runCommand({ping: 1}).ok"' 2>&1 </dev/null) && [ "$answer" = 1 ] ||
+      fail "row '$name $version': a mongod started as uid 1000 on 127.0.0.1 with no network does not answer ping: $answer"
+    printf 'ok mongod answers ping as uid 1000 with no network\n'
+  fi
 done <"$table"
 
 uid=$(run id -u) || fail "id -u: $uid"
@@ -102,7 +109,7 @@ output=$(run pwd) || fail "pwd: $output"
 output=$(run sh -c 'touch /work/.write-probe && rm /work/.write-probe') || fail "/work is not writable by uid $uid: $output"
 printf 'ok /work is writable\n'
 
-for tool in git jq curl openssl od tr ps python3 ssh; do
+for tool in git jq curl openssl od tr ps python3 ssh mongod; do
   output=$(run sh -c 'command -v "$1"' sh "$tool") || fail "$tool is not in the image"
   printf 'ok %s at %s\n' "$tool" "$output"
 done

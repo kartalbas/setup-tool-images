@@ -54,8 +54,13 @@ skopeo 1.18.0+ds1-1+b5
 # mongodump and mongosh: MongoDB's apt repository of the 8.0 series, named by the address of its signing key. The database tools (100.x) and mongosh (2.x)
 # are numbered apart from the server, and the repositories of the series 7.0 and 8.0 carry the same builds, so the row is the exact version, the newest
 # of the 8.0 repository for trixie (https://repo.mongodb.org/apt/debian/dists/trixie/mongodb-org/8.0/main/binary-amd64/Packages)
-mongodump 100.20.0 8c467ea138207ee8d0cbbce3e005c82c73c81b3263e7909bdc36b9a1feff14f6 https://pgp.mongodb.com/server-8.0.asc
+mongodump 100.20.1 8c467ea138207ee8d0cbbce3e005c82c73c81b3263e7909bdc36b9a1feff14f6 https://pgp.mongodb.com/server-8.0.asc
 mongosh 2.14.1 8c467ea138207ee8d0cbbce3e005c82c73c81b3263e7909bdc36b9a1feff14f6 https://pgp.mongodb.com/server-8.0.asc
+# mongod: package mongodb-org-server of MongoDB's apt repository of the 9.0 series for trixie
+# (https://repo.mongodb.org/apt/debian/dists/trixie/mongodb-org/9.0/main/binary-amd64/Packages); the 8.0 repository for trixie carries no server package.
+# A test pod starts a throwaway mongod from it. The row follows images.mongodb of hostyour-cloud clusters/platform/versions.yaml as hostyour/hostyour-cloud#542
+# sets it, and nothing holds the two equal. The key is named by the major (server-9.asc), so the series of the repository is the major.minor of the version
+mongod 9.0.4 a8ec953b159e65ee2e327dde5506008d7693c3c6c3841beed421ec429bd10162 https://pgp.mongodb.com/server-9.asc
 # pg_dumpall (with psql): package postgresql-client-18 of the PostgreSQL project's apt repository, https://apt.postgresql.org/pub/repos/apt trixie-pgdg
 pg_dumpall 18 0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76 https://www.postgresql.org/media/keys/ACCC4CF8.asc
 # redis-cli (package redis-tools) and redis-server: Redis' apt repository, https://packages.redis.io/deb trixie, which carries every series. The version

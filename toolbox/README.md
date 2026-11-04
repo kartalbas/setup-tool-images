@@ -20,19 +20,13 @@ of such a row is the vendor's signing key: the build checks its sha256 like any 
 every package to the signature of the repository. `test.sh` runs the client and holds the printed version to the
 series.
 
-| Row | Package | Serves | The row holds |
-| :--- | :--- | :--- | :--- |
-| `mongodump` | `mongodb-database-tools` | MongoDB 8.0 | the exact version |
-| `mongosh` | `mongodb-mongosh` | MongoDB 8.0 | the exact version |
-| `pg_dumpall` | `postgresql-client-18` | PostgreSQL 18 | the major, `18` |
-| `redis-cli` | `redis-tools` | Redis, the series of `ARG REDIS_VERSION` | the marker `REDIS_VERSION` |
-| `redis-server` | `redis-server` | Redis, the series of `ARG REDIS_VERSION` | the marker `REDIS_VERSION` |
-| `mariadb` | `mariadb-client` | MariaDB 12.3 | the series, `12.3` |
-
 MongoDB's database tools and mongosh are numbered apart from the server, and the repositories of the
 series 7.0 and 8.0 carry the same builds. Their rows are therefore the exact versions, and the series is the
-repository that the address of the signing key names. A database server that leaves its series needs a toolbox
-cut: edit the row, and for MongoDB its key address too, then cut the tag.
+repository that the address of the signing key names. The `mongod` row is the server itself, package `mongodb-org-server`,
+for a test pod that starts a throwaway server. Its key is named by the major (`server-9.asc`), so the series of its
+repository is the major and minor of the row's version. The rows of the other clients hold their own series or version,
+and the comments of [`versions.table`](versions.table) give the package and the source of each. A database server that
+leaves its series needs a toolbox cut: edit the row, and for MongoDB its key address too, then cut the tag.
 
 The Redis series is not in the rows. It is the one `ARG REDIS_VERSION=<major>.<minor>` line of the
 [`Containerfile`](Containerfile), and both Redis rows hold the marker `REDIS_VERSION` in its place. The build
@@ -112,7 +106,8 @@ The tests run on GitHub's runners, in the workflow, and never on a development m
 runs the image locally. `test.sh` takes the image, then optionally a version table and a `Containerfile` in place
 of the two beside it. After the build, the workflow runs these on the image it builds:
 
-- `test.sh`, which holds the image to every row and setting.
+- `test.sh`, which holds the image to every row and setting. It also starts a `mongod` as uid 1000 with no network
+  and holds that it answers a ping.
 - `test-planted.sh`, which holds the planted-defect scripts to their own rules without an image.
 - `test-planted-defects.sh`, which plants one defect for every check of `test.sh` (a wrong row, a wrong
   `Containerfile`, or a copy of the image changed as root) and holds that `test.sh` ends with exit 1 and a

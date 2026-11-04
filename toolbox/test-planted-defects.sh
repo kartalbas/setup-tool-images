@@ -90,13 +90,13 @@ EOF
 image_plants() {
   local small three emcc_version planted_row name phrase uid
   small=$(table_of yq)
-  three=$(table_of yq pg_dumpall skopeo)
+  three=$(table_of yq pg_dumpall skopeo mongod)
   emcc_rows=$(table_of emcc)
   emcc_version=$(row_version emcc)
 
   refuses "the image cannot be pulled" "cannot pull" "cannot pull registry.invalid/absent:0" bash "$script" registry.invalid/absent:0 "$small"
 
-  for planted_row in "yq v0.0.0" "pg_dumpall 0.0" "skopeo 0.0.0-1"; do
+  for planted_row in "yq v0.0.0" "pg_dumpall 0.0" "skopeo 0.0.0-1" "mongod 0.0.0"; do
     name=${planted_row% *}
     case $name in
       skopeo) phrase="the image holds" ;;
@@ -113,6 +113,25 @@ image_plants() {
 
   refuses_in_planted_image no-yq "the version command ends with an error" "row 'yq $(row_version yq)': the version command ends with an error" "$small" <<'EOF'
 rm -f /usr/local/bin/yq
+EOF
+
+  refuses_in_planted_image no-mongod "the version command ends with an error" "row 'mongod $(row_version mongod)': the version command ends with an error" "$(table_of mongod)" <<'EOF'
+rm -f /usr/bin/mongod
+EOF
+
+  refuses_in_planted_image no-mongod-row "is not in the image" "mongod is not in the image" "$small" <<'EOF'
+rm -f /usr/bin/mongod
+EOF
+
+  refuses_in_planted_image mongod-no-start "does not answer ping" "row 'mongod $(row_version mongod)': a mongod started as uid 1000 on 127.0.0.1 with no network does not answer ping" "$(table_of mongod)" <<'EOF'
+mv /usr/bin/mongod /usr/bin/mongod.real
+cat >/usr/bin/mongod <<'WRAPPER'
+#!/bin/sh
+case " $* " in *" --version "*) exec /usr/bin/mongod.real "$@" ;; esac
+echo "planted: mongod does not start" >&2
+exit 1
+WRAPPER
+chmod 0755 /usr/bin/mongod
 EOF
 
   refuses_in_planted_image no-dpkg-query "dpkg-query ends with an error" "row 'skopeo $(row_version skopeo)': dpkg-query ends with an error" "$(table_of skopeo)" <<'EOF'

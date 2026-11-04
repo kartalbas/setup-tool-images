@@ -48,6 +48,7 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
         rclone) unzip -q -j "$file" "rclone-${version}-linux-amd64/rclone" -d /usr/local/bin && chmod 0755 /usr/local/bin/rclone ;; \
         mongodump) series=${address##*/server-}; repository mongodb "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${series%.asc}" "mongodb-database-tools=${version}" ;; \
         mongosh) series=${address##*/server-}; repository mongodb "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${series%.asc}" "mongodb-mongosh=${version}" ;; \
+        mongod) repository mongodb-server "$file" asc https://repo.mongodb.org/apt/debian "${codename}/mongodb-org/${version%.*}" "mongodb-org-server=${version}" ;; \
         pg_dumpall) repository postgresql "$file" asc https://apt.postgresql.org/pub/repos/apt "${codename}-pgdg" "postgresql-client-${version}" ;; \
         redis-cli) repository redis "$file" asc https://packages.redis.io/deb "$codename" redis-tools && redis_pin "$version" ;; \
         redis-server) repository redis "$file" asc https://packages.redis.io/deb "$codename" redis-server && redis_pin "$version" ;; \
