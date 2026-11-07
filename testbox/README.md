@@ -1,7 +1,7 @@
 # testbox
 
-The [toolbox](../toolbox/README.md) image plus a headless Chromium and make, for the test jobs that
-need a browser and the build jobs that compile with the toolbox's emcc. It carries no project source and no project script: the job that runs it brings the code.
+The [toolbox](../toolbox/README.md) image plus a headless Chromium, make and the locale en_US.UTF-8,
+for the test jobs that need a browser and the build jobs that compile with the toolbox's emcc. It carries no project source and no project script: the job that runs it brings the code.
 
 ## What is in it
 
@@ -21,6 +21,10 @@ holds the versions that `pdftotext -v` and `pdftoppm -v` print to the `poppler-u
   for `system-ui` gets the letter widths of a monospace font. Liberation draws the pages that name Arial, Helvetica,
   Times New Roman or Courier New with the same letter widths. `test.sh` holds that `fc-match` names
   DejaVu Sans for `sans-serif` and Liberation Sans for `Arial`.
+- `locales` is Debian's own package from trixie, at the version of the base's `libc-bin`, which it
+  depends on exactly. The `Containerfile` compiles the one locale `en_US.UTF-8` from it, and `test.sh`
+  holds the image to it: a test of a push gate sorts a list in that locale to show that it is not in
+  byte order.
 - `make` is Debian's own package from trixie. A build that compiles C sources with the toolbox's
   `emcc` runs it.
 - `poppler-utils` is Debian's own package from trixie. It carries `pdftotext` and `pdftoppm`, which a job

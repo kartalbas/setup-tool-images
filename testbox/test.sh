@@ -35,6 +35,10 @@ while read -r name version _; do
 done <"$table"
 [ "$rows" -gt 0 ] || fail "no row in $table"
 
+locales=$(run locale -a) || fail "locale -a ends with an error: $locales"
+printf '%s\n' "$locales" | grep -qx 'en_US.utf8' || fail "the image has no locale en_US.UTF-8: $locales"
+printf 'ok locale en_US.utf8\n'
+
 uid=$(run id -u) || fail "id -u: $uid"
 [ "$uid" = 1000 ] || fail "the image runs as uid '$uid', not 1000"
 printf 'ok id -u %s\n' "$uid"

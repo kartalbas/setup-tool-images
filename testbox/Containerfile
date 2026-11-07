@@ -8,6 +8,7 @@ RUN packages=$(awk '!/^(#|$)/ { print $1 "=" $2 }' /versions.table); \
     [ -n "$packages" ] || { echo "versions.table: no row" >&2; exit 1; }; \
     apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends ${packages} \
+ && localedef --inputfile=en_US --charmap=UTF-8 en_US.UTF-8 \
  && rm -rf /var/lib/apt/lists/* /versions.table
 ENV REPORT_CHROMIUM_PATH=/usr/bin/chromium
 ENV REPORT_CHROMIUM_ARGS=--no-sandbox,--disable-dev-shm-usage
