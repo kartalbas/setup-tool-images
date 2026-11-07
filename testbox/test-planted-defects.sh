@@ -64,6 +64,13 @@ EOF
 refuses_in_wrapper pdftotext-prints-another-version "-v prints" "row 'poppler-utils $poppler_version': pdftotext -v prints '1.2.3'" pdftotext \
   'echo "pdftotext version 1.2.3" >&2; exit 0'
 
+refuses_in_planted_image no-locale "locale -a ends with an error" "locale -a ends with an error: " "$table" <<'EOF'
+rm -f /usr/bin/locale
+EOF
+refuses_in_planted_image no-en-us-locale "the image has no locale en_US.UTF-8" "the image has no locale en_US.UTF-8: " "$table" <<'EOF'
+rm -f /usr/lib/locale/locale-archive
+EOF
+
 refuses_in_planted_image no-id "id -u:" "id -u: " "$table" <<'EOF'
 rm -f /usr/bin/id
 EOF
