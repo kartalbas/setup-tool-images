@@ -19,7 +19,6 @@ trap 'rm -rf "$scratch"' EXIT
 # shellcheck source-path=SCRIPTDIR source=planted.sh
 . "$here/planted.sh"
 
-# The rows of the Redis tools, which test.sh requires, and of the named tools, in the order of the table.
 table_of() {
   local out=$scratch/rows-${*// /_}.table
   awk -v names=" redis-cli redis-server ${*:+$* }" 'index(names, " " $1 " ")' "$table" >"$out"
@@ -87,7 +86,6 @@ chmod 0755 /usr/local/bin/emcc
 EOF
 }
 
-# The go link of the image is replaced by a wrapper that answers "go version" as the real tool and runs the fragment before any other command.
 refuses_go_wrapper() {
   local name=$1 phrase=$2 expected=$3 fragment=$4
   refuses_in_planted_image "$name" "$phrase" "$expected" "$go_rows" <<EOF
@@ -102,13 +100,32 @@ chmod 0755 /usr/local/bin/go
 EOF
 }
 
+refuses_sshd_wrapper() {
+  local name=$1 expected=$2 fragment=$3
+  refuses_in_planted_image "$name" "sshd as uid 1000 does not serve loopback" "$expected" "$sshd_rows" <<EOF
+mv /usr/sbin/sshd /usr/sbin/sshd.real
+cat >/usr/sbin/sshd <<'WRAPPER'
+#!/bin/sh
+case " \$* " in *" -V "*) exec /usr/sbin/sshd.real "\$@" ;; esac
+$fragment
+exec /usr/sbin/sshd.real "\$@"
+WRAPPER
+chmod 0755 /usr/sbin/sshd
+EOF
+}
+
 image_plants() {
-  local small three emcc_version planted_row name phrase uid
+  local small three emcc_version planted_row name phrase uid promtool_rows promtool_version bcrypt_rows sshd_rows bwrap_rows facility_rows
   small=$(table_of yq)
   three=$(table_of yq pg_dumpall skopeo mongod)
   emcc_rows=$(table_of emcc)
   emcc_version=$(row_version emcc)
   go_rows=$(table_of go)
+  promtool_rows=$(table_of promtool)
+  promtool_version=$(row_version promtool)
+  bcrypt_rows=$(table_of python3-bcrypt)
+  sshd_rows=$(table_of openssh-server)
+  bwrap_rows=$(table_of bubblewrap)
 
   refuses "the image cannot be pulled" "cannot pull" "cannot pull registry.invalid/absent:0" bash "$script" registry.invalid/absent:0 "$small"
 
@@ -133,6 +150,70 @@ image_plants() {
 
   refuses_in_planted_image no-yq "the version command ends with an error" "row 'yq $(row_version yq)': the version command ends with an error" "$small" <<'EOF'
 rm -f /usr/local/bin/yq
+EOF
+
+  refuses_in_planted_image no-promtool-home "PROMTOOL_HOME is not" "PROMTOOL_HOME is not /usr/local/share/promtool" "$promtool_rows" --change 'ENV PROMTOOL_HOME=' <<'EOF'
+true
+EOF
+
+  refuses_in_planted_image wrong-promtool-home "PROMTOOL_HOME is not" "PROMTOOL_HOME is not /usr/local/share/promtool" "$promtool_rows" --change 'ENV PROMTOOL_HOME=/usr/local/share/absent' <<'EOF'
+true
+EOF
+
+  refuses_in_planted_image no-versioned-promtool "versioned Promtool is not executable" "versioned Promtool is not executable at /usr/local/share/promtool/$promtool_version/promtool" "$promtool_rows" <<EOF
+rm -f /usr/local/share/promtool/$promtool_version/promtool
+EOF
+
+  refuses_in_planted_image unlinked-promtool "promtool on PATH does not point to" "promtool on PATH does not point to /usr/local/share/promtool/$promtool_version/promtool" "$promtool_rows" <<EOF
+rm -f /usr/local/bin/promtool
+cp /usr/local/share/promtool/$promtool_version/promtool /usr/local/bin/promtool
+EOF
+
+  refuses_in_planted_image wrong-promtool-version "the image prints" "row 'promtool $promtool_version': the image prints '0.0.0'" "$promtool_rows" <<EOF
+printf '#!/bin/sh\necho "promtool, version 0.0.0"\n' >/usr/local/share/promtool/$promtool_version/promtool
+chmod 0755 /usr/local/share/promtool/$promtool_version/promtool
+EOF
+
+  for name in python3-bcrypt openssh-server bubblewrap; do
+    facility_rows=$(table_of "$name")
+    awk -v name="$name" '$1 == name { $2 = "0.0.0-1" } { print }' "$facility_rows" >"$scratch/planted-$name.table"
+    differs "$facility_rows" "$scratch/planted-$name.table"
+    refuses "row $name 0.0.0-1" "the image holds" "row '$name 0.0.0-1': the image holds" bash "$script" "$image" "$scratch/planted-$name.table"
+  done
+
+  refuses_in_planted_image no-bcrypt "the version command ends with an error" "row 'python3-bcrypt $(row_version python3-bcrypt)': the version command ends with an error" "$bcrypt_rows" <<'EOF'
+rm -f /usr/lib/python3/dist-packages/bcrypt/_bcrypt*.so
+EOF
+
+  refuses_in_planted_image broken-bcrypt-hash "bcrypt does not hash and verify" "row 'python3-bcrypt $(row_version python3-bcrypt)': bcrypt does not hash and verify under python3 -I" "$bcrypt_rows" <<'EOF'
+printf '\ndef hashpw(password, salt):\n    return b"planted"\n' >>/usr/lib/python3/dist-packages/bcrypt/__init__.py
+EOF
+
+  refuses_in_planted_image broken-bcrypt-verify "bcrypt does not hash and verify" "row 'python3-bcrypt $(row_version python3-bcrypt)': bcrypt does not hash and verify under python3 -I" "$bcrypt_rows" <<'EOF'
+printf '\ndef checkpw(password, hashed):\n    return True\n' >>/usr/lib/python3/dist-packages/bcrypt/__init__.py
+EOF
+
+  refuses_in_planted_image no-sshd "the version command ends with an error" "row 'openssh-server $(row_version openssh-server)': the version command ends with an error" "$sshd_rows" <<'EOF'
+rm -f /usr/sbin/sshd
+EOF
+
+  refuses_sshd_wrapper sshd-no-service "sshd as uid 1000 does not serve loopback: sshd did not serve a loopback banner" \
+    'case " $* " in *" -D "*) echo "planted: sshd cannot serve" >&2; exit 1 ;; esac'
+
+  # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
+  refuses_sshd_wrapper sshd-wildcard-config "sshd as uid 1000 does not serve loopback: sshd effective configuration is not loopback-only" \
+    'previous=; for argument; do [ "$previous" != -f ] || sed -i "s/^ListenAddress .*/ListenAddress 0.0.0.0/" "$argument"; previous=$argument; done'
+
+  # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
+  refuses_sshd_wrapper sshd-wildcard-listener "sshd as uid 1000 does not serve loopback: sshd live listeners are not loopback-only" \
+    'case " $* " in *" -D "*) previous=; for argument; do [ "$previous" != -f ] || sed -i "s/^ListenAddress .*/ListenAddress 0.0.0.0/" "$argument"; previous=$argument; done ;; esac'
+
+  refuses_in_planted_image no-bwrap "the version command ends with an error" "row 'bubblewrap $(row_version bubblewrap)': the version command ends with an error" "$bwrap_rows" <<'EOF'
+rm -f /usr/bin/bwrap
+EOF
+
+  refuses_in_planted_image setuid-bwrap "bwrap is not an executable without setuid" "bwrap is not an executable without setuid at /usr/bin/bwrap" "$bwrap_rows" <<'EOF'
+chmod u+s /usr/bin/bwrap
 EOF
 
   refuses_in_planted_image no-mongod "the version command ends with an error" "row 'mongod $(row_version mongod)': the version command ends with an error" "$(table_of mongod)" <<'EOF'

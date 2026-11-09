@@ -10,8 +10,22 @@ version, sha256 and address. Every tool is held to its row: the build checks the
 before it unpacks it, and `test.sh` runs every tool and holds the printed version to the row.
 
 The packages it adds from its Debian base are the first `apt-get install` line of the last stage of the
-[`Containerfile`](Containerfile), at the base's versions, and the `skopeo` row, at the exact version it names.
+[`Containerfile`](Containerfile), at the base's versions, and the `skopeo`, `python3-bcrypt`, `openssh-server`
+and `bubblewrap` rows, at their exact versions. These rows have no checksum or address; apt verifies
+the archive signatures, and `test.sh` checks the installed package versions.
 The base is the `BASE` argument at the top of the `Containerfile`, held by the digest of its `linux/amd64` manifest.
+
+`promtool` has one executable at `/usr/local/share/promtool/<version>/promtool`, with
+`PROMTOOL_HOME=/usr/local/share/promtool` and a link from `/usr/local/bin/promtool`. Its row must match
+the Prometheus version whose rules the job checks. `test.sh` checks the environment, executable path,
+PATH link and printed version.
+
+`python3-bcrypt` supplies bcrypt for system Python without a pip install. `test.sh` imports it under
+`python3 -I`, hashes a password, accepts that password and rejects another. `openssh-server` supplies
+`/usr/sbin/sshd`; the image test starts it as uid 1000 with scratch host keys and configuration, reads
+its effective configuration and live listener addresses, and receives an SSH banner over loopback
+with no external network. `bubblewrap` supplies `bwrap`; the test runs `bwrap --version` and checks
+that the executable has no setuid bit. That check does not prove nested namespace permissions.
 
 The clients of the databases that jobs dump and restore are rows too, but their version is the series of the
 database server they serve, not a release. Debian's archive carries one frozen series of each, so the build
@@ -65,8 +79,7 @@ Three rows are not installed the way their package's name suggests:
   the file with the checked sha256 goes in.
 - `pnpm` is the standalone release file, not the npm tarball: that tarball fetches its native binary
   from the registry when it first runs, and a job without registry access would fail at that moment.
-- `skopeo` is Debian's package from the base's archive, because upstream publishes no release file. Its row names the
-  exact version of the package and no file: the last stage's apt call installs that version with its dependencies,
+- `skopeo` uses the Debian row mechanism above: the last stage's apt call installs its exact version with its dependencies,
   apt holds it to the signature of the archive, and `test.sh` holds the installed package to the row. The trust policy,
   `/etc/containers/policy.json`, comes with the dependency `golang-github-containers-common`, and `test.sh` holds that
   file: skopeo refuses every copy without a policy, and its version print does not show it.
@@ -77,8 +90,9 @@ Three rows are not installed the way their package's name suggests:
 docker run --rm ghcr.io/kartalbas/toolbox:<tag> <tool> --version
 ```
 
-A few tools take another command: `helm version`, `kubectl version --client`, `kubeconform -v`, `rclone version`
-and `gitleaks version`. `test.sh` names the command of every row.
+A few tools take another command: `helm version`, `kubectl version --client`, `kubeconform -v`, `rclone version`,
+`gitleaks version`, `/usr/sbin/sshd -V` and `python3 -I -c 'import bcrypt; print(bcrypt.__version__)'`.
+`test.sh` names the command of every row.
 
 Verify it before you use it. The digest of each tag stands in the job summary of its workflow run:
 
@@ -102,9 +116,23 @@ git tag toolbox/v<major>.<minor>.<patch>
 git push origin toolbox/v<major>.<minor>.<patch>
 ```
 
-The tests run on GitHub's runners, in the workflow, and never on a development machine: nothing here builds or
-runs the image locally. `test.sh` takes the image, then optionally a version table and a `Containerfile` in place
-of the two beside it. After the build, the workflow runs these on the image it builds:
+When the shared checks require a new testbox base, replace steps 2 and 3 with a staged issue branch.
+Publish the reviewed toolbox tag from that branch, pin testbox's `BASE` to its real tag and digest,
+then publish testbox with its complete workflow green. Land the paired source on `master` only after
+both image workflows pass; the toolbox tag alone checks no testbox image.
+
+The workflows run the image checks on GitHub's runners. These image checks may also run locally with Docker.
+From the repository root:
+
+```
+docker build --file toolbox/Containerfile -t toolbox:test toolbox
+bash toolbox/test.sh toolbox:test
+bash toolbox/test-planted.sh
+bash toolbox/test-planted-defects.sh toolbox:test
+```
+
+`test.sh` takes the image, then optionally a version table and a `Containerfile` in place of the two beside it.
+After the build, the workflow runs these on the image it builds:
 
 - `test.sh`, which holds the image to every row and setting. It also starts a `mongod` as uid 1000 with no network
   and holds that it answers a ping, that `MONGOMS_SYSTEM_BINARY` names that `mongod`, so mongodb-memory-server
@@ -117,7 +145,9 @@ of the two beside it. After the build, the workflow runs these on the image it b
   message that names the check. It also runs the unchanged copy, which `test.sh` accepts. It prints how many
   checks of `test.sh` it covered and in how many of them it showed the refusal; it fails when a check
   has no planted defect, so a new check needs its planted defect in the same change. The argument `--sites`
-  runs the coverage count alone, which needs no image.
+  runs the coverage count alone, which needs no image. The Promtool, bcrypt, sshd and bwrap mutations include
+  missing tools, a wrong Promtool version, missing `PROMTOOL_HOME`, broken bcrypt hash/verify results,
+  an sshd that prints a version but cannot serve, non-loopback sshd configuration/listeners and setuid bwrap.
 - `test-emcc-release.sh`, which builds the `install` stage with an `emcc` row that names another release than
   the archive's and holds that the build stops with the message of the check.
 

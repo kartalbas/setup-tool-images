@@ -34,7 +34,9 @@ RUN codename=$(. /etc/os-release && echo "$VERSION_CODENAME") \
         go) tar -xzf "$file" -C /usr/local --no-same-owner && ln -s /usr/local/go/bin/go /usr/local/bin/go && ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt ;; \
         helm) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner linux-amd64/helm ;; \
         yq) install --mode 0755 "$file" /usr/local/bin/yq ;; \
-        promtool) tar -xzf "$file" -C /usr/local/bin --strip-components=1 --no-same-owner "prometheus-${version}.linux-amd64/promtool" ;; \
+        promtool) mkdir -p "/usr/local/share/promtool/$version" \
+          && tar -xzf "$file" -C "/usr/local/share/promtool/$version" --strip-components=1 --no-same-owner "prometheus-${version}.linux-amd64/promtool" \
+          && ln -s "/usr/local/share/promtool/$version/promtool" /usr/local/bin/promtool ;; \
         gitleaks) tar -xzf "$file" -C /usr/local/bin --no-same-owner gitleaks ;; \
         powershell) mkdir -p /opt/microsoft/powershell/7 && tar -xzf "$file" -C /opt/microsoft/powershell/7 --no-same-owner && chmod 0755 /opt/microsoft/powershell/7/pwsh && ln -s /opt/microsoft/powershell/7/pwsh /usr/local/bin/pwsh ;; \
         emcc) mkdir /usr/local/emcc && tar -xJf "$file" -C /usr/local/emcc --strip-components=1 --no-same-owner \
@@ -75,9 +77,9 @@ COPY --from=install /opt/microsoft /opt/microsoft
 RUN groupadd --gid 1000 toolbox \
  && useradd --uid 1000 --gid 1000 --home-dir /work --no-create-home --shell /bin/bash toolbox \
  && install --directory --owner 1000 --group 1000 /work
-# mongodb-memory-server reads these, so a test starts the image's mongod and downloads none, which a test pod cannot;
-# without the version it warns of a version conflict at every start. The version is the mongod row of versions.table.
+# mongodb-memory-server cannot download in a test pod and warns unless both settings identify its mongod.
 ENV MONGOMS_SYSTEM_BINARY=/usr/bin/mongod \
     MONGOMS_VERSION=9.0.4
+ENV PROMTOOL_HOME=/usr/local/share/promtool
 USER 1000
 WORKDIR /work

@@ -48,11 +48,17 @@ says how it is bumped.
    `ARG REDIS_VERSION` line of `toolbox/Containerfile`, which the project that consumes the image
    writes with its version stamp when its Redis series changes. The `emcc` row is an exception too:
    the upstream states only a crc32c for its file, so its sha256 is the one measured on the file. The
-   skopeo row is a package of the base's Debian archive: its exact version, with no sha256 and no
-   address.
+   `skopeo`, `python3-bcrypt`, `openssh-server` and `bubblewrap` rows are packages of the base's Debian
+   archive: their exact versions, with no sha256 and no address.
 2. Commit to `master`. The workflow builds and tests the image and pushes nothing.
 3. Cut the tag `<image>/v<major>.<minor>.<patch>` on that commit and push it. The workflow builds,
    tests, pushes, signs and verifies.
+
+When a toolbox change requires a new testbox base, replace steps 2 and 3 with a staged issue branch.
+Publish the reviewed toolbox tag from that branch, then set testbox's `BASE` to the published tag and
+digest. Run the complete testbox workflow and publish testbox before landing the paired image source
+on `master`. Both workflows must pass; a toolbox tag run checks only toolbox. This order keeps the
+shared checks from running against an older testbox base that lacks the new tools.
 
 ## What is planned
 
