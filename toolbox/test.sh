@@ -31,6 +31,9 @@ version_output() {
     rclone) run rclone version ;;
     emcc) run emcc --version ;;
     skopeo) run skopeo --version ;;
+    python3-bcrypt) run python3 -I -c 'import bcrypt; print(bcrypt.__version__)' ;;
+    openssh-server) run /usr/sbin/sshd -V ;;
+    bubblewrap) run bwrap --version ;;
     mongodump) run mongodump --version ;;
     mongosh) run mongosh --version ;;
     mongod) run mongod --version ;;
@@ -48,6 +51,63 @@ holds() {
     *.*.*) [ "$printed" = "$wanted" ] ;;
     *) [[ "$printed" == "$wanted".* ]] ;;
   esac
+}
+
+probe_sshd() {
+  docker run --rm --interactive --network none --user 1000 "$image" bash -euo pipefail -s 2>&1 <<'EOF'
+scratch=$(mktemp -d)
+sshd_pid=
+trap 'if [ -n "$sshd_pid" ]; then kill "$sshd_pid" 2>/dev/null || true; wait "$sshd_pid" 2>/dev/null || true; fi; rm -rf "$scratch"' EXIT
+ssh-keygen -q -t ed25519 -N '' -C '' -f "$scratch/host"
+port=$(python3 -I -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')
+printf '%s\n' "Port $port" 'ListenAddress 127.0.0.1' "HostKey $scratch/host" \
+  "PidFile $scratch/pid" 'AuthorizedKeysFile none' 'PasswordAuthentication no' \
+  'KbdInteractiveAuthentication no' 'UsePAM no' 'StrictModes no' >"$scratch/config"
+/usr/sbin/sshd -T -f "$scratch/config" >"$scratch/effective"
+python3 -I - "$scratch/effective" "$port" <<'PY'
+import pathlib
+import sys
+
+listeners = [line.split()[1] for line in pathlib.Path(sys.argv[1]).read_text().splitlines()
+             if line.startswith("listenaddress ")]
+if listeners != [f"127.0.0.1:{sys.argv[2]}"]:
+    raise SystemExit(f"sshd effective configuration is not loopback-only: {listeners}")
+PY
+/usr/sbin/sshd -D -e -f "$scratch/config" >"$scratch/log" 2>&1 &
+sshd_pid=$!
+python3 -I - "$port" "$sshd_pid" "$scratch/log" <<'PY'
+import os
+import pathlib
+import socket
+import sys
+import time
+
+port, pid = map(int, sys.argv[1:3])
+for attempt in range(50):
+    try:
+        os.kill(pid, 0)
+        with socket.create_connection(("127.0.0.1", port), timeout=0.2) as connection:
+            banner = connection.recv(256)
+        if not banner.startswith(b"SSH-2.0-"):
+            raise SystemExit(f"sshd returned no SSH-2.0 banner: {banner!r}")
+        break
+    except OSError:
+        time.sleep(0.1)
+else:
+    raise SystemExit("sshd did not serve a loopback banner: " + pathlib.Path(sys.argv[3]).read_text())
+
+listeners = []
+for protocol in ("tcp", "tcp6"):
+    for line in pathlib.Path(f"/proc/net/{protocol}").read_text().splitlines()[1:]:
+        fields = line.split()
+        address, port_hex = fields[1].split(":")
+        if fields[3] == "0A" and int(port_hex, 16) == port:
+            listeners.append((protocol, address))
+if listeners != [("tcp", "0100007F")]:
+    raise SystemExit(f"sshd live listeners are not loopback-only: {listeners}")
+print(f"sshd serves a loopback SSH banner as uid {os.getuid()}")
+PY
+EOF
 }
 
 [ -r "$containerfile" ] || fail "cannot read $containerfile"
@@ -69,6 +129,15 @@ while read -r name version sha256 _; do
       [ "$version" = REDIS_VERSION ] || fail "row '$name $version': a Redis row holds the marker REDIS_VERSION"
       version=$redis_series ;;
   esac
+  if [ "$name" = promtool ]; then
+    output=$(run printenv PROMTOOL_HOME) && [ "$output" = /usr/local/share/promtool ] || fail "PROMTOOL_HOME is not /usr/local/share/promtool: '$output'"
+    printf 'ok PROMTOOL_HOME %s\n' "$output"
+    promtool_path=$output/$version/promtool
+    run sh -c 'test -x "$1"' sh "$promtool_path" >/dev/null || fail "versioned Promtool is not executable at $promtool_path"
+    printf 'ok versioned Promtool at %s\n' "$promtool_path"
+    output=$(run sh -c 'readlink -f "$(command -v promtool)"') && [ "$output" = "$promtool_path" ] || fail "promtool on PATH does not point to $promtool_path: '$output'"
+    printf 'ok promtool on PATH points to %s\n' "$output"
+  fi
   output=$(version_output "$name") || fail "row '$name $version': the version command ends with an error: $output"
   printed=$(printf '%s\n' "$output" | grep -o -E '[0-9]+(\.[0-9]+)+' | head -n 1)
   if [ -z "$sha256" ]; then
@@ -78,6 +147,29 @@ while read -r name version sha256 _; do
     holds "$printed" "$version" || fail "row '$name $version': the image prints '$printed': $output"
   fi
   printf 'ok %s %s (printed %s)\n' "$name" "$version" "$printed"
+  if [ "$name" = python3-bcrypt ]; then
+    output=$(run python3 -I -c 'import bcrypt; password = b"toolbox-probe"; hashed = bcrypt.hashpw(password, bcrypt.gensalt(rounds=4)); assert bcrypt.checkpw(password, hashed); assert not bcrypt.checkpw(b"another-password", hashed); print("bcrypt hashes and verifies under python3 -I")') ||
+      fail "row '$name $version': bcrypt does not hash and verify under python3 -I: $output"
+    printf 'ok %s\n' "$output"
+  fi
+  if [ "$name" = openssh-server ]; then
+    # unread: OpenSSH and its systemd dependency create keys and boot links unless the image removes that state.
+    output=$(run sh -c 'find /etc/ssh -name "ssh_host_*" -print') && [ -z "$output" ] || fail "the image carries SSH host keys: $output"
+    printf 'ok the image carries no SSH host keys\n'
+    output=$(run sh -c 'for unit in ssh.service ssh.socket sshd-keygen.service getty@tty1.service systemd-pstore.service remote-fs.target; do state=$(systemctl is-enabled "$unit"); [ "$state" = disabled ] || { printf "%s %s\n" "$unit" "$state"; exit 1; }; done') ||
+      fail "the image enables a systemd unit from the SSH installation: $output"
+    printf 'ok systemd units from the SSH installation are disabled\n'
+    run sh -c 'for link in /etc/rc?.d/S*ssh; do [ ! -e "$link" ] || exit 1; done' >/dev/null || fail "the image enables an SSH SysV service"
+    printf 'ok SSH SysV startup is disabled\n'
+    run sh -c 'pgrep -x sshd; test "$?" = 1' >/dev/null || fail "the image starts an SSH daemon before the fixture"
+    printf 'ok no SSH daemon starts before the fixture\n'
+    output=$(probe_sshd) || fail "row '$name $version': sshd as uid 1000 does not serve loopback: $output"
+    printf 'ok %s\n' "$output"
+  fi
+  if [ "$name" = bubblewrap ]; then
+    run sh -c 'test -x /usr/bin/bwrap && test ! -u /usr/bin/bwrap' >/dev/null || fail "bwrap is not an executable without setuid at /usr/bin/bwrap"
+    printf 'ok /usr/bin/bwrap is executable without setuid\n'
+  fi
   if [ "$name" = emcc ]; then
     # A job that checks the compiler matches the version between two spaces in the output of emcc --version.
     case "$output" in
