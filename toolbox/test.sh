@@ -153,6 +153,16 @@ while read -r name version sha256 _; do
     printf 'ok %s\n' "$output"
   fi
   if [ "$name" = openssh-server ]; then
+    # unread: OpenSSH and its systemd dependency create keys and boot links unless the image removes that state.
+    output=$(run sh -c 'find /etc/ssh -name "ssh_host_*" -print') && [ -z "$output" ] || fail "the image carries SSH host keys: $output"
+    printf 'ok the image carries no SSH host keys\n'
+    output=$(run sh -c 'for unit in ssh.service ssh.socket sshd-keygen.service getty@tty1.service systemd-pstore.service remote-fs.target; do state=$(systemctl is-enabled "$unit"); [ "$state" = disabled ] || { printf "%s %s\n" "$unit" "$state"; exit 1; }; done') ||
+      fail "the image enables a systemd unit from the SSH installation: $output"
+    printf 'ok systemd units from the SSH installation are disabled\n'
+    run sh -c 'for link in /etc/rc?.d/S*ssh; do [ ! -e "$link" ] || exit 1; done' >/dev/null || fail "the image enables an SSH SysV service"
+    printf 'ok SSH SysV startup is disabled\n'
+    run sh -c 'pgrep -x sshd; test "$?" = 1' >/dev/null || fail "the image starts an SSH daemon before the fixture"
+    printf 'ok no SSH daemon starts before the fixture\n'
     output=$(probe_sshd) || fail "row '$name $version': sshd as uid 1000 does not serve loopback: $output"
     printf 'ok %s\n' "$output"
   fi

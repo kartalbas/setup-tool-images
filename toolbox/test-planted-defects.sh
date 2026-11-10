@@ -197,8 +197,62 @@ EOF
 rm -f /usr/sbin/sshd
 EOF
 
+  # unread: each install-time SSH side effect needs a separate refusal before the fixture starts.
+  refuses_in_planted_image baked-sshd-key "the image carries SSH host keys" "the image carries SSH host keys: /etc/ssh/ssh_host_ed25519_key" "$sshd_rows" <<'EOF'
+ssh-keygen -q -t ed25519 -N '' -C '' -f /etc/ssh/ssh_host_ed25519_key
+EOF
+
+  for name in ssh.service ssh.socket sshd-keygen.service getty@tty1.service systemd-pstore.service remote-fs.target; do
+    refuses_in_planted_image "enabled-${name//@/-}" "the image enables a systemd unit from the SSH installation" "the image enables a systemd unit from the SSH installation: $name enabled" "$sshd_rows" <<EOF
+systemctl enable $name
+EOF
+  done
+
+  # update-rc.d would also enable the native systemd unit, masking the SysV check.
+  refuses_in_planted_image enabled-sshd-sysv "the image enables an SSH SysV service" "the image enables an SSH SysV service" "$sshd_rows" <<'EOF'
+mv /etc/rc2.d/K01ssh /etc/rc2.d/S01ssh
+EOF
+
+  refuses_in_planted_image running-sshd "the image starts an SSH daemon before the fixture" "the image starts an SSH daemon before the fixture" "$sshd_rows" --change 'ENTRYPOINT ["/usr/local/bin/planted-sshd-start"]' <<'EOF'
+cat >/usr/local/bin/planted-sshd-start <<'WRAPPER'
+#!/bin/sh
+set -e
+scratch=$(mktemp -d)
+ssh-keygen -q -t ed25519 -N '' -C '' -f "$scratch/host"
+printf '%s\n' 'Port 22222' 'ListenAddress 127.0.0.1' "HostKey $scratch/host" "PidFile $scratch/pid" 'UsePAM no' >"$scratch/config"
+/usr/sbin/sshd -f "$scratch/config"
+exec "$@"
+WRAPPER
+chmod 0755 /usr/local/bin/planted-sshd-start
+EOF
+
   refuses_sshd_wrapper sshd-no-service "sshd as uid 1000 does not serve loopback: sshd did not serve a loopback banner" \
     'case " $* " in *" -D "*) echo "planted: sshd cannot serve" >&2; exit 1 ;; esac'
+
+  # unread: a listening process is not proof that its bytes are an SSH banner.
+  refuses_in_planted_image sshd-invalid-banner "sshd as uid 1000 does not serve loopback" "sshd as uid 1000 does not serve loopback: sshd returned no SSH-2.0 banner" "$sshd_rows" <<'EOF'
+mv /usr/sbin/sshd /usr/sbin/sshd.real
+cat >/usr/sbin/sshd <<'WRAPPER'
+#!/usr/bin/python3 -I
+import os
+import pathlib
+import socket
+import sys
+
+if "-D" not in sys.argv:
+    os.execv("/usr/sbin/sshd.real", ["/usr/sbin/sshd.real", *sys.argv[1:]])
+config = pathlib.Path(sys.argv[sys.argv.index("-f") + 1]).read_text()
+port = next(int(line.split()[1]) for line in config.splitlines() if line.startswith("Port "))
+with socket.socket() as listener:
+    listener.bind(("127.0.0.1", port))
+    listener.listen()
+    while True:
+        connection, _ = listener.accept()
+        with connection:
+            connection.sendall(b"planted: not an SSH banner\r\n")
+WRAPPER
+chmod 0755 /usr/sbin/sshd
+EOF
 
   # shellcheck disable=SC2016 # the fragment expands in the container's sh, not here
   refuses_sshd_wrapper sshd-wildcard-config "sshd as uid 1000 does not serve loopback: sshd effective configuration is not loopback-only" \

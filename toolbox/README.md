@@ -22,7 +22,10 @@ PATH link and printed version.
 
 `python3-bcrypt` supplies bcrypt for system Python without a pip install. `test.sh` imports it under
 `python3 -I`, hashes a password, accepts that password and rejects another. `openssh-server` supplies
-`/usr/sbin/sshd`; the image test starts it as uid 1000 with scratch host keys and configuration, reads
+`/usr/sbin/sshd`. The install layer removes generated host keys and disables the SSH service, socket,
+key-generation unit, SysV startup and boot units enabled by its systemd dependency. The image test
+checks that state and that no daemon starts with an ordinary command, then starts sshd as uid 1000
+with scratch host keys and configuration, reads
 its effective configuration and live listener addresses, and receives an SSH banner over loopback
 with no external network. `bubblewrap` supplies `bwrap`; the test runs `bwrap --version` and checks
 that the executable has no setuid bit. That check does not prove nested namespace permissions.
@@ -147,7 +150,8 @@ After the build, the workflow runs these on the image it builds:
   has no planted defect, so a new check needs its planted defect in the same change. The argument `--sites`
   runs the coverage count alone, which needs no image. The Promtool, bcrypt, sshd and bwrap mutations include
   missing tools, a wrong Promtool version, missing `PROMTOOL_HOME`, broken bcrypt hash/verify results,
-  an sshd that prints a version but cannot serve, non-loopback sshd configuration/listeners and setuid bwrap.
+  baked SSH host keys, enabled SSH units/SysV startup, an automatically started daemon, an sshd that
+  prints a version but cannot serve, a non-SSH banner, non-loopback sshd configuration/listeners and setuid bwrap.
 - `test-emcc-release.sh`, which builds the `install` stage with an `emcc` row that names another release than
   the archive's and holds that the build stops with the message of the check.
 
