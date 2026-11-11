@@ -65,7 +65,7 @@ FROM ${BASE}
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
  && apt-get install --yes --no-install-recommends \
-      git ca-certificates curl jq openssl procps coreutils python3 openssh-client patch unzip xz-utils tar gzip libatomic1 libicu76 \
+      git ca-certificates curl jq openssl procps coreutils python3 openssh-client patch unzip xz-utils tar gzip libatomic1 libicu76 make iproute2 \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=install /vendor-apt /vendor-apt
 RUN cp /etc/apt/sources.list.d/debian.sources /vendor-apt/sources/ \

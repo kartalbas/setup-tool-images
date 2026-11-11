@@ -210,7 +210,7 @@ output=$(run pwd) || fail "pwd: $output"
 output=$(run sh -c 'touch /work/.write-probe && rm /work/.write-probe') || fail "/work is not writable by uid $uid: $output"
 printf 'ok /work is writable\n'
 
-for tool in git jq curl openssl od tr ps python3 ssh mongod go gofmt; do
+for tool in git jq curl openssl od tr ps python3 ssh mongod go gofmt make ip; do
   output=$(run sh -c 'command -v "$1"' sh "$tool") || fail "$tool is not in the image"
   printf 'ok %s at %s\n' "$tool" "$output"
 done
